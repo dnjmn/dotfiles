@@ -1,0 +1,17 @@
+[user]
+	name=dnjmn
+	email=dhananjay21iitd@gmail.com
+[core]
+	autocrlf=input
+[color]
+	ui=true
+	status=auto
+	branch=auto
+	interactive=auto
+	diff=auto
+[init]
+	defaultBranch=master
+[difftool]
+	prompt=true
+[pull]
+	ff=only
