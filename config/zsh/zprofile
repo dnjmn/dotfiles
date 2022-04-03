@@ -6,4 +6,7 @@ fi
 #-- Zsh
 export HISTFILE="$XDG_STATE_HOME"/zsh/history
 
-#source $ZDOTDIR/work/kreditbee/zsh/env.zsh
+#-- sorce work zsh files
+for rcfile in /Users/metalhead/Github/office/$WORK/config/zsh/*; do
+  source $rcfile
+done

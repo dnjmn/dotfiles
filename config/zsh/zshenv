@@ -96,3 +96,6 @@ export WORKON_HOME="$XDG_DATA_HOME/virtualenvs"
 
 ##-- Vscode -----------------------------------------------------------------------------------
 export VSCODE_PORTABLE="$XDG_DATA_HOME/vscode"
+
+#-- WORK -------------------------------------------------------------------------------------------
+export WORK=krazybee
