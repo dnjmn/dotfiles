@@ -8,14 +8,11 @@ fi
 clear
 fortune
 
-#-- ZPREZTO ----------------------------------------------------------------------------------------
-#source "$ZDOTDIR/.zprezto/init.zsh"
+source $ZDOTDIR/ohmyzsh
 
 #-- ALIASES ----------------------------------------------------------------------------------------
 source $ZDOTDIR/aliases
 #source $ZDOTDIR/work/kreditbee/zsh/aliases.zsh
-
-source $ZDOTDIR/ohmyzsh
 
 # To customize prompt, run `p10k configure` or edit ~/.config/zsh/.p10k.zsh.
 [[ ! -f ~/.config/zsh/.p10k.zsh ]] || source ~/.config/zsh/.p10k.zsh
