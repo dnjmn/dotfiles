@@ -20,15 +20,14 @@ export MACHINE_STORAGE_PATH="$XDG_DATA_HOME"/docker-machine
 ## Option -Dosgi.configuration.area=@user.home/.config/.. overrides but must be added to "$ECLIPSE_HOME"/eclipse.ini" rather than command line which means you must have write access to $ECLIPSE_HOME. (Arch Linux hard-codes $ECLIPSE_HOME in /usr/bin/eclipse)
 
 #-- GOLANG -----------------------------------------------------------------------------------------
-export GOPATH="$XDG_DATA_HOME"/go
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     export GOROOT="/usr/local/go"
 elif [[ "$OSTYPE" == "darwin"* ]]; then
-    if [[ -z "${GOROOT}" ]]; then 
-        export GOROOT="/opt/homebrew/Cellar/go/1.18/libexec"
+    if [[ -z "${GOROOT}" ]]; then
+        # export GOROOT="/opt/homebrew/Cellar/go/1.18/libexec"
+        export GOROOT="/opt/homebrew/opt/go@1.17/libexec"
     fi
 fi
-export PATH=$GOPATH/bin:$GOROOT/bin:$PATH
 
 #-- JAVA  ------------------------------------------------------------------------------------------
 ## Java#OpenJDK
@@ -55,14 +54,6 @@ export MYSQL_HISTFILE=$XDG_DATA_HOME/mysql_history
 ## node.js
 export NODE_REPL_HISTORY=$XDG_DATA_HOME/node_repl_history
 export NPM_CONFIG_USERCONFIG=$XDG_CONFIG_HOME/npm/npmrc
-
-#-- NPM --------------------------------------------------------------------------------------------
-## npmrc
-##prefix=${XDG_DATA_HOME}/npm
-##cache=${XDG_CACHE_HOME}/npm
-##tmp=${XDG_RUNTIME_DIR}/npm
-##init-module=${XDG_CONFIG_HOME}/npm/config/npm-init.js
-##prefix is unnecessary (and unsupported) if Node.js is installed by nvmAUR. If you want to configure this system-wide, the file to edit is /usr/etc/npmrc, not /etc/npmrc. You can confirm that the config is loaded by running npm config list
 
 #-- NVM --------------------------------------------------------------------------------------------
 export NVM_DIR="$XDG_DATA_HOME/nvm"
@@ -91,6 +82,10 @@ export GEM_SPEC_CACHE="$XDG_CACHE_HOME"/gem
 ## Rust#Rustup
 export RUSTUP_HOME="$XDG_DATA_HOME"/rustup
 
+##-- TermInfo -------------------------------------------------------------------------------
+export TERMINFO="$XDG_DATA_HOME"/terminfo
+export TERMINFO_DIRS="$XDG_DATA_HOME"/terminfo:/usr/share/terminfov
+
 ##-- VirtualENV -------------------------------------------------------------------------------
 export WORKON_HOME="$XDG_DATA_HOME/virtualenvs"
 
@@ -99,3 +94,4 @@ export VSCODE_PORTABLE="$XDG_DATA_HOME/vscode"
 
 #-- WORK -------------------------------------------------------------------------------------------
 export WORK=krazybee
+
