@@ -5,7 +5,7 @@ if [[ $(command -v /opt/homebrew/bin/brew) != "" ]] then
     FPATH="$(brew --prefix)/share/zsh/site-functions:${FPATH}"
 fi
 
-export PATH=$GOROOT/bin:$PATH
+export PATH=$GOROOT/bin:$GOPATH/bin:$PATH
 
 #-- Zsh
 export HISTFILE="$XDG_STATE_HOME"/zsh/history
