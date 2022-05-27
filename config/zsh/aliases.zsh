@@ -42,5 +42,5 @@ alias sshp14s='ssh p14s -t tmux a -t p14s'
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     alias v='~/./nvim.appimage'
 elif [[ "$OSTYPE" == "darwin"* ]]; then
-    alias v='nvim'
+    alias v='~/.local/bin/lvim'
 fi

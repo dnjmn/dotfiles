@@ -19,3 +19,7 @@ source $ZDOTDIR/aliases
 [[ ! -f ~/.config/zsh/.p10k.zsh ]] || source ~/.config/zsh/.p10k.zsh
 
 fpath+=${ZDOTDIR:-~}/.zsh_functions
+
+#THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
+export SDKMAN_DIR="/Users/metalhead/.local/share/sdkman"
+[[ -s "/Users/metalhead/.local/share/sdkman/bin/sdkman-init.sh" ]] && source "/Users/metalhead/.local/share/sdkman/bin/sdkman-init.sh"

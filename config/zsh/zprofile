@@ -2,15 +2,16 @@
 if [[ $(command -v /opt/homebrew/bin/brew) != "" ]] then
     eval $(/opt/homebrew/bin/brew shellenv)
     #-- homebrew complition
-    FPATH="$(brew --prefix)/share/zsh/site-functions:${FPATH}"
+    FPATH="${FPATH}:$(brew --prefix)/share/zsh/site-functions"
 fi
 
 export PATH=$GOROOT/bin:$GOPATH/bin:$PATH
+export PATH="$HOME/.config/lvim:$PATH"
 
 #-- Zsh
 export HISTFILE="$XDG_STATE_HOME"/zsh/history
 
 #-- sorce work zsh files
-for rcfile in /Users/metalhead/Github/office/$WORK/config/zsh/*; do
-  source $rcfile
-done
+# for rcfile in /Users/metalhead/Github/office/$WORK/config/zsh/*; do
+#   source $rcfile
+# done
