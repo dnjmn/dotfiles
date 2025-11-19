@@ -1,0 +1,11 @@
+# Zsh runtime files
+.zcompdump*
+.zsh_history
+*.zwc
+.zcompcache/
+
+# Local overrides
+local.zsh
+
+# Cache files
+cache/
