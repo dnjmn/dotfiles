@@ -37,6 +37,7 @@ Every `<tool>/install.sh` must be:
 | Obsidian | `~/.config/obsidian/` | `obsidian/install.sh` | ✅ scripted |
 | Neovim | `neovim/` → `~/.config/nvim/` | `neovim/install.sh` | ✅ scripted |
 | LSD | `~/.config/lsd/` | `lsd/install.sh` | ✅ scripted |
+| Notion | `~/.local/share/notion/` | `notion/install.sh` | ✅ scripted |
 
 **Full setup**: `./install.sh --all`
 
