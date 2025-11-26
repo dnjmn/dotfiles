@@ -77,8 +77,8 @@ source $ZSH/oh-my-zsh.sh
 # ===== USER CONFIGURATION =====
 
 # Preferred editor
-export EDITOR='vim'
-export VISUAL='vim'
+export EDITOR='nvim'
+export VISUAL='nvim'
 
 # Language environment
 export LANG=en_US.UTF-8
@@ -98,12 +98,21 @@ alias ....="cd ../../.."
 alias ~="cd ~"
 alias -- -="cd -"
 
-# ls aliases (with colors)
-alias ls="ls --color=auto"
-alias ll="ls -lh"
-alias la="ls -lha"
-alias l="ls -CF"
-alias lt="ls -lhtr"  # Sort by time
+# ls aliases (using lsd if available, fallback to standard ls)
+if command -v lsd &> /dev/null; then
+  alias ls="lsd"
+  alias ll="lsd -l"
+  alias la="lsd -la"
+  alias l="lsd -F"
+  alias lt="lsd -l --timesort"
+  alias tree="lsd --tree"
+else
+  alias ls="ls --color=auto"
+  alias ll="ls -lh"
+  alias la="ls -lha"
+  alias l="ls -CF"
+  alias lt="ls -lhtr"
+fi
 
 # Git aliases (additional to oh-my-zsh git plugin)
 alias gs="git status"

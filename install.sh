@@ -58,7 +58,9 @@ echo -e "${BOLD}Available installations:${NC}"
 echo "  1. Zsh Shell (with Oh My Zsh, Powerlevel10k, plugins)"
 echo "  2. Kitty Terminal (GPU-accelerated terminal emulator)"
 echo "  3. Tmux (Terminal multiplexer with sensible defaults)"
-echo "  4. All of the above"
+echo "  4. Obsidian (Knowledge base and note-taking)"
+echo "  5. Neovim (LazyVim configuration)"
+echo "  6. All of the above"
 echo ""
 
 # Check if running in non-interactive mode
@@ -75,27 +77,50 @@ elif [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     echo "  --zsh             Install only Zsh"
     echo "  --kitty           Install only Kitty Terminal"
     echo "  --tmux            Install only Tmux"
+    echo "  --obsidian        Install only Obsidian"
+    echo "  --neovim          Install only Neovim"
     echo ""
     echo "Examples:"
     echo "  ./install.sh              # Interactive mode"
     echo "  ./install.sh --all        # Install everything"
     echo "  ./install.sh --zsh        # Install only Zsh"
     echo "  ./install.sh --tmux       # Install only Tmux"
+    echo "  ./install.sh --neovim     # Install only Neovim"
     exit 0
 elif [ "$1" = "--zsh" ]; then
     INSTALL_ZSH=true
     INSTALL_KITTY=false
     INSTALL_TMUX=false
+    INSTALL_OBSIDIAN=false
+    INSTALL_NEOVIM=false
     INTERACTIVE=false
 elif [ "$1" = "--kitty" ]; then
     INSTALL_ZSH=false
     INSTALL_KITTY=true
     INSTALL_TMUX=false
+    INSTALL_OBSIDIAN=false
+    INSTALL_NEOVIM=false
     INTERACTIVE=false
 elif [ "$1" = "--tmux" ]; then
     INSTALL_ZSH=false
     INSTALL_KITTY=false
     INSTALL_TMUX=true
+    INSTALL_OBSIDIAN=false
+    INSTALL_NEOVIM=false
+    INTERACTIVE=false
+elif [ "$1" = "--obsidian" ]; then
+    INSTALL_ZSH=false
+    INSTALL_KITTY=false
+    INSTALL_TMUX=false
+    INSTALL_OBSIDIAN=true
+    INSTALL_NEOVIM=false
+    INTERACTIVE=false
+elif [ "$1" = "--neovim" ]; then
+    INSTALL_ZSH=false
+    INSTALL_KITTY=false
+    INSTALL_TMUX=false
+    INSTALL_OBSIDIAN=false
+    INSTALL_NEOVIM=true
     INTERACTIVE=false
 else
     INTERACTIVE=true
@@ -139,12 +164,36 @@ if [ "$INTERACTIVE" = true ]; then
         esac
     done
 
+    # Obsidian
+    while true; do
+        read -p "Install Obsidian? (y/n): " -n 1 -r
+        echo
+        case $REPLY in
+            [Yy]* ) INSTALL_OBSIDIAN=true; break;;
+            [Nn]* ) INSTALL_OBSIDIAN=false; break;;
+            * ) echo "Please answer y or n.";;
+        esac
+    done
+
+    # Neovim
+    while true; do
+        read -p "Install Neovim? (y/n): " -n 1 -r
+        echo
+        case $REPLY in
+            [Yy]* ) INSTALL_NEOVIM=true; break;;
+            [Nn]* ) INSTALL_NEOVIM=false; break;;
+            * ) echo "Please answer y or n.";;
+        esac
+    done
+
     # Confirm
     echo ""
     print_info "Installation Summary:"
     [ "$INSTALL_ZSH" = true ] && echo "  ✓ Zsh Shell"
     [ "$INSTALL_KITTY" = true ] && echo "  ✓ Kitty Terminal"
     [ "$INSTALL_TMUX" = true ] && echo "  ✓ Tmux"
+    [ "$INSTALL_OBSIDIAN" = true ] && echo "  ✓ Obsidian"
+    [ "$INSTALL_NEOVIM" = true ] && echo "  ✓ Neovim"
     echo ""
 
     while true; do
@@ -160,10 +209,12 @@ elif [ "$INSTALL_ALL" = true ]; then
     INSTALL_ZSH=true
     INSTALL_KITTY=true
     INSTALL_TMUX=true
+    INSTALL_OBSIDIAN=true
+    INSTALL_NEOVIM=true
 fi
 
 # Check if anything is selected
-if [ "$INSTALL_ZSH" != true ] && [ "$INSTALL_KITTY" != true ] && [ "$INSTALL_TMUX" != true ]; then
+if [ "$INSTALL_ZSH" != true ] && [ "$INSTALL_KITTY" != true ] && [ "$INSTALL_TMUX" != true ] && [ "$INSTALL_OBSIDIAN" != true ] && [ "$INSTALL_NEOVIM" != true ]; then
     print_warning "Nothing selected to install. Exiting."
     exit 0
 fi
@@ -199,24 +250,18 @@ fi
 if [ "$INSTALL_KITTY" = true ]; then
     print_header "Installing Kitty Terminal"
 
-    print_warning "Kitty Terminal installation is manual."
-    print_info "Please follow the instructions in docs/kitty-terminal-setup.md"
-    echo ""
-    echo "Quick instructions:"
-    echo "  1. Download and install Kitty:"
-    echo "     curl -L https://sw.kovidgoyal.net/kitty/installer.sh | sh /dev/stdin"
-    echo ""
-    echo "  2. Create symlinks:"
-    echo "     ln -sf ~/.local/kitty.app/bin/kitty ~/.local/bin/"
-    echo "     ln -sf ~/.local/kitty.app/bin/kitten ~/.local/bin/"
-    echo ""
-    echo "  3. Download JetBrainsMono Nerd Font from:"
-    echo "     https://github.com/ryanoasis/nerd-fonts/releases"
-    echo ""
-    echo "  4. Configure Kitty (config in ~/.config/kitty/kitty.conf)"
-    echo ""
-
-    INSTALLATIONS_SUCCEEDED+=("Kitty Terminal (manual steps required)")
+    if [ -f "$SCRIPT_DIR/kitty/install.sh" ]; then
+        if bash "$SCRIPT_DIR/kitty/install.sh"; then
+            INSTALLATIONS_SUCCEEDED+=("Kitty Terminal")
+            print_success "Kitty installation completed"
+        else
+            INSTALLATIONS_FAILED+=("Kitty Terminal")
+            print_error "Kitty installation failed"
+        fi
+    else
+        print_error "kitty/install.sh not found"
+        INSTALLATIONS_FAILED+=("Kitty Terminal")
+    fi
 fi
 
 # Install Tmux
@@ -234,6 +279,42 @@ if [ "$INSTALL_TMUX" = true ]; then
     else
         print_error "Tmux installation script not found at $SCRIPT_DIR/tmux/install.sh"
         INSTALLATIONS_FAILED+=("Tmux")
+    fi
+fi
+
+# Install Obsidian
+if [ "$INSTALL_OBSIDIAN" = true ]; then
+    print_header "Installing Obsidian"
+
+    if [ -f "$SCRIPT_DIR/obsidian/install.sh" ]; then
+        if bash "$SCRIPT_DIR/obsidian/install.sh"; then
+            INSTALLATIONS_SUCCEEDED+=("Obsidian")
+            print_success "Obsidian installation completed"
+        else
+            INSTALLATIONS_FAILED+=("Obsidian")
+            print_error "Obsidian installation failed"
+        fi
+    else
+        print_error "Obsidian installation script not found at $SCRIPT_DIR/obsidian/install.sh"
+        INSTALLATIONS_FAILED+=("Obsidian")
+    fi
+fi
+
+# Install Neovim
+if [ "$INSTALL_NEOVIM" = true ]; then
+    print_header "Installing Neovim"
+
+    if [ -f "$SCRIPT_DIR/neovim/install.sh" ]; then
+        if bash "$SCRIPT_DIR/neovim/install.sh"; then
+            INSTALLATIONS_SUCCEEDED+=("Neovim")
+            print_success "Neovim installation completed"
+        else
+            INSTALLATIONS_FAILED+=("Neovim")
+            print_error "Neovim installation failed"
+        fi
+    else
+        print_error "Neovim installation script not found at $SCRIPT_DIR/neovim/install.sh"
+        INSTALLATIONS_FAILED+=("Neovim")
     fi
 fi
 
@@ -270,9 +351,9 @@ fi
 
 if [ "$INSTALL_KITTY" = true ]; then
     echo -e "${BOLD}Kitty Terminal:${NC}"
-    echo "  1. Complete manual installation steps above"
-    echo "  2. Configure theme and settings"
-    echo "  3. See docs/kitty-terminal-setup.md for details"
+    echo "  1. Reload config: Ctrl+Shift+F5"
+    echo "  2. Change theme: kitty +kitten themes"
+    echo "  3. See docs/kitty-terminal-setup.md for shortcuts"
     echo ""
 fi
 
@@ -282,6 +363,23 @@ if [ "$INSTALL_TMUX" = true ]; then
     echo "  2. Install plugins: Press Prefix + I (Ctrl+a then Shift+i)"
     echo "  3. Reload config: Press Prefix + r (Ctrl+a then r)"
     echo "  4. See docs/tmux-setup.md for keyboard shortcuts"
+    echo ""
+fi
+
+if [ "$INSTALL_OBSIDIAN" = true ]; then
+    echo -e "${BOLD}Obsidian:${NC}"
+    echo "  1. Launch: obsidian (or from app menu)"
+    echo "  2. Create a vault in ~/Documents/Obsidian/"
+    echo "  3. See docs/obsidian-setup.md for shortcuts and plugins"
+    echo ""
+fi
+
+if [ "$INSTALL_NEOVIM" = true ]; then
+    echo -e "${BOLD}Neovim:${NC}"
+    echo "  1. Launch: nvim"
+    echo "  2. Plugins install automatically on first run"
+    echo "  3. Check health: :checkhealth"
+    echo "  4. See docs/neovim-setup.md for shortcuts"
     echo ""
 fi
 
