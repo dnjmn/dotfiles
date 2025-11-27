@@ -60,7 +60,8 @@ echo "  2. Kitty Terminal (GPU-accelerated terminal emulator)"
 echo "  3. Tmux (Terminal multiplexer with sensible defaults)"
 echo "  4. Obsidian (Knowledge base and note-taking)"
 echo "  5. Neovim (LazyVim configuration)"
-echo "  6. All of the above"
+echo "  6. Claude Code (AI assistant configuration)"
+echo "  7. All of the above"
 echo ""
 
 # Check if running in non-interactive mode
@@ -79,6 +80,7 @@ elif [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     echo "  --tmux            Install only Tmux"
     echo "  --obsidian        Install only Obsidian"
     echo "  --neovim          Install only Neovim"
+    echo "  --claude          Install only Claude Code configs"
     echo ""
     echo "Examples:"
     echo "  ./install.sh              # Interactive mode"
@@ -86,6 +88,7 @@ elif [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     echo "  ./install.sh --zsh        # Install only Zsh"
     echo "  ./install.sh --tmux       # Install only Tmux"
     echo "  ./install.sh --neovim     # Install only Neovim"
+    echo "  ./install.sh --claude     # Install only Claude Code"
     exit 0
 elif [ "$1" = "--zsh" ]; then
     INSTALL_ZSH=true
@@ -93,6 +96,7 @@ elif [ "$1" = "--zsh" ]; then
     INSTALL_TMUX=false
     INSTALL_OBSIDIAN=false
     INSTALL_NEOVIM=false
+    INSTALL_CLAUDE=false
     INTERACTIVE=false
 elif [ "$1" = "--kitty" ]; then
     INSTALL_ZSH=false
@@ -100,6 +104,7 @@ elif [ "$1" = "--kitty" ]; then
     INSTALL_TMUX=false
     INSTALL_OBSIDIAN=false
     INSTALL_NEOVIM=false
+    INSTALL_CLAUDE=false
     INTERACTIVE=false
 elif [ "$1" = "--tmux" ]; then
     INSTALL_ZSH=false
@@ -107,6 +112,7 @@ elif [ "$1" = "--tmux" ]; then
     INSTALL_TMUX=true
     INSTALL_OBSIDIAN=false
     INSTALL_NEOVIM=false
+    INSTALL_CLAUDE=false
     INTERACTIVE=false
 elif [ "$1" = "--obsidian" ]; then
     INSTALL_ZSH=false
@@ -114,6 +120,7 @@ elif [ "$1" = "--obsidian" ]; then
     INSTALL_TMUX=false
     INSTALL_OBSIDIAN=true
     INSTALL_NEOVIM=false
+    INSTALL_CLAUDE=false
     INTERACTIVE=false
 elif [ "$1" = "--neovim" ]; then
     INSTALL_ZSH=false
@@ -121,6 +128,15 @@ elif [ "$1" = "--neovim" ]; then
     INSTALL_TMUX=false
     INSTALL_OBSIDIAN=false
     INSTALL_NEOVIM=true
+    INSTALL_CLAUDE=false
+    INTERACTIVE=false
+elif [ "$1" = "--claude" ]; then
+    INSTALL_ZSH=false
+    INSTALL_KITTY=false
+    INSTALL_TMUX=false
+    INSTALL_OBSIDIAN=false
+    INSTALL_NEOVIM=false
+    INSTALL_CLAUDE=true
     INTERACTIVE=false
 else
     INTERACTIVE=true
@@ -186,6 +202,17 @@ if [ "$INTERACTIVE" = true ]; then
         esac
     done
 
+    # Claude Code
+    while true; do
+        read -p "Install Claude Code configs? (y/n): " -n 1 -r
+        echo
+        case $REPLY in
+            [Yy]* ) INSTALL_CLAUDE=true; break;;
+            [Nn]* ) INSTALL_CLAUDE=false; break;;
+            * ) echo "Please answer y or n.";;
+        esac
+    done
+
     # Confirm
     echo ""
     print_info "Installation Summary:"
@@ -194,6 +221,7 @@ if [ "$INTERACTIVE" = true ]; then
     [ "$INSTALL_TMUX" = true ] && echo "  ✓ Tmux"
     [ "$INSTALL_OBSIDIAN" = true ] && echo "  ✓ Obsidian"
     [ "$INSTALL_NEOVIM" = true ] && echo "  ✓ Neovim"
+    [ "$INSTALL_CLAUDE" = true ] && echo "  ✓ Claude Code"
     echo ""
 
     while true; do
@@ -211,10 +239,11 @@ elif [ "$INSTALL_ALL" = true ]; then
     INSTALL_TMUX=true
     INSTALL_OBSIDIAN=true
     INSTALL_NEOVIM=true
+    INSTALL_CLAUDE=true
 fi
 
 # Check if anything is selected
-if [ "$INSTALL_ZSH" != true ] && [ "$INSTALL_KITTY" != true ] && [ "$INSTALL_TMUX" != true ] && [ "$INSTALL_OBSIDIAN" != true ] && [ "$INSTALL_NEOVIM" != true ]; then
+if [ "$INSTALL_ZSH" != true ] && [ "$INSTALL_KITTY" != true ] && [ "$INSTALL_TMUX" != true ] && [ "$INSTALL_OBSIDIAN" != true ] && [ "$INSTALL_NEOVIM" != true ] && [ "$INSTALL_CLAUDE" != true ]; then
     print_warning "Nothing selected to install. Exiting."
     exit 0
 fi
@@ -318,6 +347,24 @@ if [ "$INSTALL_NEOVIM" = true ]; then
     fi
 fi
 
+# Install Claude Code configs
+if [ "$INSTALL_CLAUDE" = true ]; then
+    print_header "Installing Claude Code"
+
+    if [ -f "$SCRIPT_DIR/claude/install.sh" ]; then
+        if bash "$SCRIPT_DIR/claude/install.sh"; then
+            INSTALLATIONS_SUCCEEDED+=("Claude Code")
+            print_success "Claude Code setup completed"
+        else
+            INSTALLATIONS_FAILED+=("Claude Code")
+            print_error "Claude Code setup failed"
+        fi
+    else
+        print_error "Claude installation script not found at $SCRIPT_DIR/claude/install.sh"
+        INSTALLATIONS_FAILED+=("Claude Code")
+    fi
+fi
+
 # Summary
 print_header "Installation Summary"
 
@@ -380,6 +427,15 @@ if [ "$INSTALL_NEOVIM" = true ]; then
     echo "  2. Plugins install automatically on first run"
     echo "  3. Check health: :checkhealth"
     echo "  4. See docs/neovim-setup.md for shortcuts"
+    echo ""
+fi
+
+if [ "$INSTALL_CLAUDE" = true ]; then
+    echo -e "${BOLD}Claude Code:${NC}"
+    echo "  1. Run: claude"
+    echo "  2. Configs linked from dotfiles to ~/.claude/"
+    echo "  3. Custom agents available (debugger, reviewers, etc.)"
+    echo "  4. See docs/claude-setup.md for details"
     echo ""
 fi
 

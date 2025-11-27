@@ -38,6 +38,7 @@ Every `<tool>/install.sh` must be:
 | Neovim | `neovim/` → `~/.config/nvim/` | `neovim/install.sh` | ✅ scripted |
 | LSD | `~/.config/lsd/` | `lsd/install.sh` | ✅ scripted |
 | Notion | `~/.local/share/notion/` | `notion/install.sh` | ✅ scripted |
+| Claude | `claude/` → `~/.claude/` | `claude/install.sh` | ✅ scripted |
 
 **Full setup**: `./install.sh --all`
 
@@ -146,4 +147,5 @@ print_ok "<tool> setup complete!"
 - **Editor**: Neovim (LazyVim) + minuet-ai
 - **Multiplexer**: Tmux + TPM
 - **Notes**: Obsidian
+- **AI**: Claude Code (custom agents + global instructions)
 - **Theme**: Gruvbox Dark (all tools)
