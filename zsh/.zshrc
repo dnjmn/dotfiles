@@ -316,4 +316,4 @@ fi
 # Welcome message (comment out if you prefer clean startup)
 # echo "Welcome to Zsh with Oh My Zsh and Powerlevel10k!"
 
-alias claude="/home/dhananjay-meena/.claude/local/claude"
+alias claude="$HOME/.claude/local/claude"

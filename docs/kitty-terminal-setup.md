@@ -190,7 +190,7 @@ kitty --config ~/.config/kitty/kitty.conf
 **2025-11-11 Desktop File Fix:**
 - Fixed Kitty not launching from app gallery
 - Updated desktop file to use absolute paths for `Exec` and `TryExec`
-- Changed from `kitty` to `/home/dhananjay-meena/.local/bin/kitty`
+- Changed from `kitty` to `~/.local/bin/kitty`
 - Updated desktop database with `update-desktop-database`
 - Location: `~/.local/share/applications/kitty.desktop`
 
