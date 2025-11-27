@@ -51,7 +51,7 @@ This setup follows XDG Base Directory specification:
 │               ├── tmux-continuum/
 │               ├── tmux-yank/
 │               └── tmux-copycat/
-└── Developer/repos/dnjmn/ubuntu-setup/tmux/ # Source (version controlled)
+└── Developer/repos/dnjmn/dotfiles/tmux/ # Source (version controlled)
     ├── tmux.conf                            # Configuration file
     └── install.sh                           # Installation script
 ```
@@ -159,7 +159,7 @@ This setup follows XDG Base Directory specification:
 
 ### Main Configuration
 - **Path:** `~/.config/tmux/tmux.conf`
-- **Source:** Symlinked from `~/Developer/repos/dnjmn/ubuntu-setup/tmux/tmux.conf`
+- **Source:** Symlinked from `~/Developer/repos/dnjmn/dotfiles/tmux/tmux.conf`
 - **Edit:** Edit the file in the repo to keep changes version controlled
 
 ### Plugin Installation

@@ -1,6 +1,6 @@
 # .zshrc - Zsh Configuration
 # Generated: 2025-11-07
-# Located in: ZDOTDIR (ubuntu-setup/zsh/)
+# Located in: ZDOTDIR (dotfiles/zsh/)
 # This configuration uses Oh My Zsh with Powerlevel10k theme
 
 # Enable Powerlevel10k instant prompt. Should stay close to the top of .zshrc.
@@ -136,7 +136,7 @@ alias ln="ln -i"
 # Directory shortcuts
 alias dev="cd ~/Developer"
 alias repos="cd ~/Developer/repos"
-alias dotfiles="cd ~/Developer/repos/dnjmn/ubuntu-setup"
+alias dotfiles="cd ~/Developer/repos/dnjmn/dotfiles"
 
 # System
 alias update="sudo apt update && sudo apt upgrade -y"

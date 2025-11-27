@@ -82,7 +82,7 @@ This setup follows the XDG Base Directory specification to avoid cluttering the 
 │   ├── zsh/                                   # XDG_CACHE_HOME
 │   │   └── zcompdump-*                        # Completion cache
 │   └── oh-my-zsh/                             # Oh My Zsh cache
-└── Developer/repos/dnjmn/ubuntu-setup/zsh/    # ZDOTDIR (version controlled)
+└── Developer/repos/dnjmn/dotfiles/zsh/    # ZDOTDIR (version controlled)
     ├── .zshrc                                 # Main configuration
     ├── .zshenv                                # Environment variables
     ├── .p10k.zsh                              # Powerlevel10k config (created on first run)
@@ -112,7 +112,7 @@ This setup follows the XDG Base Directory specification to avoid cluttering the 
 ### Directory Navigation
 ```bash
 # Jump to frequently used directories
-z dotfiles          # Jump to ubuntu-setup directory
+z dotfiles          # Jump to dotfiles directory
 z repos             # Jump to repos directory
 
 # Quick navigation aliases
@@ -149,7 +149,7 @@ qp "message"        # git add -A && git commit && git push
 ## Configuration Files
 
 ### Main Configuration: `ZDOTDIR/.zshrc`
-Located at: `~/Developer/repos/dnjmn/ubuntu-setup/zsh/.zshrc`
+Located at: `~/Developer/repos/dnjmn/dotfiles/zsh/.zshrc`
 
 **Key Sections:**
 1. **Oh My Zsh Configuration** - Theme and update settings
@@ -162,7 +162,7 @@ Located at: `~/Developer/repos/dnjmn/ubuntu-setup/zsh/.zshrc`
 8. **Powerlevel10k** - Theme settings
 
 ### Environment Variables: `ZDOTDIR/.zshenv`
-Located at: `~/Developer/repos/dnjmn/ubuntu-setup/zsh/.zshenv`
+Located at: `~/Developer/repos/dnjmn/dotfiles/zsh/.zshenv`
 
 **Sets up:**
 - XDG Base Directories
@@ -219,7 +219,7 @@ Located at: `~/Developer/repos/dnjmn/ubuntu-setup/zsh/.zshenv`
 ...                 # cd ../..
 dev                 # cd ~/Developer
 repos               # cd ~/Developer/repos
-dotfiles            # cd ~/Developer/repos/dnjmn/ubuntu-setup
+dotfiles            # cd ~/Developer/repos/dnjmn/dotfiles
 ```
 
 ### Configuration
@@ -314,7 +314,7 @@ p10k configure
 
 ### Installation
 ```bash
-cd ~/Developer/repos/dnjmn/ubuntu-setup/zsh
+cd ~/Developer/repos/dnjmn/dotfiles/zsh
 ./install.sh
 ```
 
@@ -444,7 +444,7 @@ git clone https://github.com/user/plugin $ZSH_CUSTOM/plugins/plugin-name
 
 **2025-11-07 Initial Setup:**
 - Implemented XDG Base Directory specification
-- ZDOTDIR set to repository location (~/Developer/repos/dnjmn/ubuntu-setup/zsh)
+- ZDOTDIR set to repository location (~/Developer/repos/dnjmn/dotfiles/zsh)
 - Oh My Zsh installed to XDG_DATA_HOME (~/.local/share/oh-my-zsh)
 - Only ~/.zshenv in home directory (minimal footprint)
 - Secret environment variables in ~/.config/zsh/env.zsh

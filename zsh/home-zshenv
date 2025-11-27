@@ -3,7 +3,7 @@
 # This is the ONLY zsh file that should live in ~ (home directory)
 
 # Set ZDOTDIR to the dotfiles repository
-export ZDOTDIR="$HOME/Developer/repos/dnjmn/ubuntu-setup/zsh"
+export ZDOTDIR="$HOME/Developer/repos/dnjmn/dotfiles/zsh"
 
 # Source the main .zshenv from ZDOTDIR
 if [[ -f "$ZDOTDIR/.zshenv" ]]; then

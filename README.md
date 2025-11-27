@@ -8,13 +8,13 @@ This repository serves as a central location for all Ubuntu configuration files 
 
 ### Install Everything (Recommended for New Machines)
 ```bash
-cd ~/Developer/repos/dnjmn/ubuntu-setup
+cd ~/Developer/repos/dnjmn/dotfiles
 ./install.sh --all
 ```
 
 ### Interactive Installation
 ```bash
-cd ~/Developer/repos/dnjmn/ubuntu-setup
+cd ~/Developer/repos/dnjmn/dotfiles
 ./install.sh
 ```
 
@@ -70,8 +70,8 @@ See the [`docs/`](docs/) folder for detailed setup guides:
    ```bash
    mkdir -p ~/Developer/repos/dnjmn
    cd ~/Developer/repos/dnjmn
-   git clone <your-repo-url> ubuntu-setup
-   cd ubuntu-setup
+   git clone <your-repo-url> dotfiles
+   cd dotfiles
    ```
 
 2. **Run the master install script:**

@@ -345,7 +345,7 @@ if [ "$INSTALL_ZSH" = true ]; then
     echo "  1. Log out and log back in (or run: exec zsh)"
     echo "  2. Configure Powerlevel10k when prompted"
     echo "  3. Add secrets to: ~/.config/zsh/env.zsh"
-    echo "  4. Customize config: ~/Developer/repos/dnjmn/ubuntu-setup/zsh/.zshrc"
+    echo "  4. Customize config: ~/Developer/repos/dnjmn/dotfiles/zsh/.zshrc"
     echo ""
 fi
 

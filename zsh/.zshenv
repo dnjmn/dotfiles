@@ -1,6 +1,6 @@
 # .zshenv - Environment variables
 # This file is sourced on all shell invocations
-# Located in: ZDOTDIR (ubuntu-setup/zsh/)
+# Located in: ZDOTDIR (dotfiles/zsh/)
 
 # ===== XDG BASE DIRECTORY SPECIFICATION =====
 export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
