@@ -36,7 +36,9 @@ echo ""
 # Ensure Homebrew is available
 print_info "Ensuring Homebrew is available..."
 ensure_homebrew
-init_brew || true
+if ! init_brew; then
+    print_warn "Brew not initialized in current session - may need manual setup"
+fi
 
 # Create directories
 print_step "Creating directories..."
@@ -78,10 +80,21 @@ else
         print_info "Installing Neovim via Homebrew..."
         pkg_install neovim
     else
-        # Linux: Use AppImage for latest version
+        # Linux: Use AppImage for latest version with checksum verification
         print_info "Installing Neovim via AppImage..."
         NVIM_APPIMAGE="$NVIM_BIN_DIR/nvim.appimage"
-        curl -fsSL "https://github.com/neovim/neovim/releases/latest/download/nvim.appimage" -o "$NVIM_APPIMAGE"
+        NVIM_URL="https://github.com/neovim/neovim/releases/latest/download/nvim.appimage"
+        CHECKSUM_URL="https://github.com/neovim/neovim/releases/latest/download/nvim.appimage.sha256sum"
+
+        # Fetch checksum for verification
+        print_info "Fetching checksum..."
+        if EXPECTED_CHECKSUM=$(curl -fsSL "$CHECKSUM_URL" | cut -d' ' -f1); then
+            download_verified "$NVIM_URL" "$NVIM_APPIMAGE" "$EXPECTED_CHECKSUM"
+        else
+            print_warn "Could not fetch checksum - downloading without verification"
+            download_verified "$NVIM_URL" "$NVIM_APPIMAGE"
+        fi
+
         chmod +x "$NVIM_APPIMAGE"
         ln -sf "$NVIM_APPIMAGE" "$NVIM_BIN_DIR/nvim"
     fi
@@ -90,21 +103,7 @@ fi
 
 # 3. Link configuration from repo
 print_step "Linking configuration..."
-
-if [ -d "$NVIM_CONFIG_DIR" ]; then
-    if [ -L "$NVIM_CONFIG_DIR" ]; then
-        print_warning "Config is already a symlink, updating..."
-        rm "$NVIM_CONFIG_DIR"
-    else
-        # Backup existing config
-        backup_dir="$NVIM_CONFIG_DIR.backup.$(date +%Y%m%d_%H%M%S)"
-        mv "$NVIM_CONFIG_DIR" "$backup_dir"
-        print_warning "Backed up existing config to $backup_dir"
-    fi
-fi
-
-ln -sf "$SCRIPT_DIR" "$NVIM_CONFIG_DIR"
-print_info "Config linked: $NVIM_CONFIG_DIR -> $SCRIPT_DIR"
+symlink_with_backup "$SCRIPT_DIR" "$NVIM_CONFIG_DIR"
 
 # 4. Bootstrap lazy.nvim (plugin manager)
 print_step "Bootstrapping lazy.nvim..."
@@ -119,7 +118,9 @@ fi
 
 # 5. Install plugins headlessly
 print_step "Installing plugins (this may take a moment)..."
-nvim --headless "+Lazy! sync" +qa 2>/dev/null || true
+if ! nvim --headless "+Lazy! sync" +qa 2>&1; then
+    print_warn "Plugin sync may have had issues - run ':Lazy sync' manually if needed"
+fi
 print_info "Plugins synchronized"
 
 # Summary

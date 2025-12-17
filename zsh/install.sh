@@ -6,7 +6,7 @@
 # Everything follows XDG Base Directory specification to keep home directory clean
 # Date: 2025-11-07
 
-set -e  # Exit on error
+set -euo pipefail  # Fail fast: exit on error, undefined vars, pipe failures
 
 # Get script directory (where this install.sh is located)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -39,7 +39,9 @@ echo ""
 # Ensure Homebrew is available
 print_info "Ensuring Homebrew is available..."
 ensure_homebrew
-init_brew || true
+if ! init_brew; then
+    print_warn "Brew not initialized in current session - may need manual setup"
+fi
 
 # Create necessary XDG directories
 print_step "Creating XDG directory structure..."
@@ -181,7 +183,9 @@ echo "======================================"
 echo ""
 print_info "Directory Structure:"
 echo "  • ZDOTDIR: $SCRIPT_DIR"
-echo "  • Config files: $SCRIPT_DIR/.zshrc, $SCRIPT_DIR/.zshenv"
+echo "  • Config modules: $SCRIPT_DIR/config/"
+echo "  • Alias modules: $SCRIPT_DIR/aliases/"
+echo "  • Function modules: $SCRIPT_DIR/functions/"
 echo "  • Secrets: $XDG_CONFIG_HOME/zsh/env.zsh"
 echo "  • Oh My Zsh: $ZSH"
 echo "  • History: $XDG_STATE_HOME/zsh/history"

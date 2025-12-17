@@ -25,7 +25,9 @@ print_platform_info
 if is_macos; then
     print_step "Installing Notion via Homebrew Cask..."
     ensure_homebrew
-    init_brew || true
+    if ! init_brew; then
+        print_warn "Brew not initialized in current session - may need manual setup"
+    fi
     pkg_install_cask notion
 
     echo ""
@@ -61,23 +63,16 @@ fi
 
 # Get latest release from notion-repackaged
 print_step "Fetching latest Notion release..."
-RELEASE_API="https://api.github.com/repos/notion-enhancer/notion-repackaged/releases/latest"
-# Cross-platform URL extraction using grep -E
-DOWNLOAD_URL=$(curl -fsSL "$RELEASE_API" | grep -E '"browser_download_url".*\.AppImage"' | sed 's/.*"browser_download_url": *"\([^"]*\)".*/\1/' | head -1)
-
-if [ -z "$DOWNLOAD_URL" ]; then
+if ! DOWNLOAD_URL=$(get_github_release_url "notion-enhancer/notion-repackaged" "\.AppImage$"); then
     print_error "Could not find AppImage download URL"
     exit 1
 fi
 
 print_info "Download URL: $DOWNLOAD_URL"
 
-# Download AppImage
+# Download AppImage (no checksum available for this third-party repo)
 print_step "Downloading Notion AppImage..."
-if ! curl -fsSL "$DOWNLOAD_URL" -o "$NOTION_BIN"; then
-    print_error "Failed to download Notion"
-    exit 1
-fi
+download_verified "$DOWNLOAD_URL" "$NOTION_BIN"
 
 chmod +x "$NOTION_BIN"
 print_info "AppImage saved to $NOTION_BIN"
@@ -86,29 +81,17 @@ print_info "AppImage saved to $NOTION_BIN"
 ln -sf "$NOTION_BIN" "$BIN_DIR/notion"
 print_info "Symlink created: $BIN_DIR/notion"
 
-# Download icon
+# Download icon (non-critical)
 print_step "Downloading icon..."
-curl -fsSL "https://raw.githubusercontent.com/notion-enhancer/notion-repackaged/main/media/colour.svg" \
-    -o "$ICON_DIR/notion.svg" 2>/dev/null || true
+ICON_PATH="$ICON_DIR/notion.svg"
+if ! curl -fsSL "https://raw.githubusercontent.com/notion-enhancer/notion-repackaged/main/media/colour.svg" -o "$ICON_PATH"; then
+    print_warn "Icon download failed (non-critical)"
+    ICON_PATH=""
+fi
 
 # Create desktop entry
 print_step "Creating desktop entry..."
-cat > "$DESKTOP_DIR/notion.desktop" << EOF
-[Desktop Entry]
-Version=1.0
-Type=Application
-Name=Notion
-GenericName=Productivity
-Comment=All-in-one workspace
-Exec=$NOTION_BIN %U
-Icon=$ICON_DIR/notion.svg
-Terminal=false
-Categories=Office;Productivity;
-Keywords=notes;wiki;productivity;
-StartupWMClass=Notion
-EOF
-
-update-desktop-database "$DESKTOP_DIR" 2>/dev/null || true
+create_desktop_entry "Notion" "$NOTION_BIN" "$ICON_PATH" "Office;Productivity"
 
 # Summary
 echo ""

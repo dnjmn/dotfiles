@@ -25,7 +25,9 @@ print_platform_info
 if is_macos; then
     print_step "Installing Obsidian via Homebrew Cask..."
     ensure_homebrew
-    init_brew || true
+    if ! init_brew; then
+        print_warn "Brew not initialized in current session - may need manual setup"
+    fi
     pkg_install_cask obsidian
 
     echo ""
@@ -68,9 +70,7 @@ mkdir -p "$XDG_CONFIG_HOME/obsidian"
 
 # Get latest version from GitHub API
 print_step "Fetching latest Obsidian version..."
-LATEST_VERSION=$(curl -sL "https://api.github.com/repos/obsidianmd/obsidian-releases/releases/latest" | jq -r '.tag_name' | sed 's/^v//')
-
-if [ -z "$LATEST_VERSION" ] || [ "$LATEST_VERSION" = "null" ]; then
+if ! LATEST_VERSION=$(get_github_release_version "obsidianmd/obsidian-releases"); then
     print_error "Failed to fetch latest version"
     exit 1
 fi
@@ -88,13 +88,18 @@ if [ -f "$APPIMAGE_PATH" ]; then
     fi
 fi
 
-# Download AppImage
+# Download AppImage with checksum verification
 print_step "Downloading Obsidian $LATEST_VERSION..."
 DOWNLOAD_URL="https://github.com/obsidianmd/obsidian-releases/releases/download/v${LATEST_VERSION}/Obsidian-${LATEST_VERSION}.AppImage"
+CHECKSUM_URL="https://github.com/obsidianmd/obsidian-releases/releases/download/v${LATEST_VERSION}/SHA-256.txt"
 
-if ! curl -L --progress-bar -o "$APPIMAGE_PATH" "$DOWNLOAD_URL"; then
-    print_error "Download failed"
-    exit 1
+# Fetch checksum for verification
+print_info "Fetching checksum..."
+if EXPECTED_CHECKSUM=$(curl -fsSL "$CHECKSUM_URL" 2>/dev/null | grep "Obsidian-${LATEST_VERSION}.AppImage" | cut -d' ' -f1); then
+    download_verified "$DOWNLOAD_URL" "$APPIMAGE_PATH" "$EXPECTED_CHECKSUM"
+else
+    print_warn "Could not fetch checksum - downloading without verification"
+    download_verified "$DOWNLOAD_URL" "$APPIMAGE_PATH"
 fi
 
 chmod +x "$APPIMAGE_PATH"
@@ -116,25 +121,7 @@ fi
 
 # Create desktop entry
 print_step "Creating desktop entry..."
-cat > "$DESKTOP_FILE" << EOF
-[Desktop Entry]
-Name=Obsidian
-Comment=Knowledge base and note-taking
-Exec=$APPIMAGE_PATH %U
-Icon=$ICON_PATH
-Terminal=false
-Type=Application
-Categories=Office;TextEditor;
-MimeType=x-scheme-handler/obsidian;
-StartupWMClass=obsidian
-EOF
-
-# Update desktop database
-if command -v update-desktop-database &>/dev/null; then
-    update-desktop-database "$XDG_DATA_HOME/applications" 2>/dev/null || true
-fi
-
-print_info "Desktop entry created"
+create_desktop_entry "Obsidian" "$APPIMAGE_PATH" "$ICON_PATH" "Office;TextEditor"
 
 # Summary
 echo ""

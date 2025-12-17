@@ -41,6 +41,7 @@ Every `<tool>/install.sh` must be:
 
 | Tool | Config | Install | Status |
 |------|--------|---------|--------|
+| Homebrew | `lib/platform.sh` | `homebrew/install.sh` | ✅ scripted |
 | Kitty | `kitty/` → `~/.config/kitty/` | `kitty/install.sh` | ✅ scripted |
 | Zsh | `zsh/` (ZDOTDIR) | `zsh/install.sh` | ✅ scripted |
 | Tmux | `tmux/` → `~/.config/tmux/` | `tmux/install.sh` | ✅ scripted |

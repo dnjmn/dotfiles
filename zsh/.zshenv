@@ -54,9 +54,12 @@ export WGETRC="$XDG_CONFIG_HOME/wget/wgetrc"
 
 # ===== PATH CONFIGURATION =====
 
-# Homebrew - Cross-platform detection
+# Homebrew - Cross-platform detection (XDG first, then system locations)
+# User-level XDG location (priority)
+if [[ -x "$XDG_DATA_HOME/homebrew/bin/brew" ]]; then
+  eval "$("$XDG_DATA_HOME/homebrew/bin/brew" shellenv)"
 # macOS Apple Silicon
-if [[ -x /opt/homebrew/bin/brew ]]; then
+elif [[ -x /opt/homebrew/bin/brew ]]; then
   eval "$(/opt/homebrew/bin/brew shellenv)"
 # macOS Intel
 elif [[ -x /usr/local/bin/brew ]]; then

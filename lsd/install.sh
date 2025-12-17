@@ -41,10 +41,12 @@ else
         # macOS: Use Homebrew
         print_info "Installing LSD via Homebrew..."
         ensure_homebrew
-        init_brew || true
+        if ! init_brew; then
+            print_warn "Brew not initialized in current session - may need manual setup"
+        fi
         pkg_install lsd
     else
-        # Linux: Download binary
+        # Linux: Download binary (checksums in release notes, not as separate file)
         print_info "Installing LSD ${LSD_VERSION}..."
 
         tmp_dir=$(mktemp -d)
@@ -59,11 +61,7 @@ else
 
         download_url="https://github.com/lsd-rs/lsd/releases/download/${LSD_VERSION}/lsd-${LSD_VERSION}-${arch}-unknown-linux-gnu.tar.gz"
 
-        if ! curl -fsSL "$download_url" -o "$tmp_dir/lsd.tar.gz"; then
-            print_error "Failed to download LSD"
-            rm -rf "$tmp_dir"
-            exit 1
-        fi
+        download_verified "$download_url" "$tmp_dir/lsd.tar.gz"
 
         tar -xzf "$tmp_dir/lsd.tar.gz" -C "$tmp_dir"
         cp "$tmp_dir/lsd-${LSD_VERSION}-${arch}-unknown-linux-gnu/lsd" "$LSD_BIN_DIR/lsd"

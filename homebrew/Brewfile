@@ -1,0 +1,26 @@
+# Brewfile - All Homebrew packages for dotfiles setup
+# Install with: brew bundle --file=homebrew/Brewfile
+
+# === CLI Tools ===
+brew "zsh"           # Shell
+brew "tmux"          # Terminal multiplexer
+brew "neovim"        # Editor
+brew "fzf"           # Fuzzy finder
+brew "fd"            # Fast find alternative
+brew "bat"           # Cat with syntax highlighting
+brew "lsd"           # Modern ls
+brew "tree"          # Directory tree
+brew "ripgrep"       # Fast grep
+brew "git"           # Version control
+brew "curl"          # HTTP client
+brew "jq"            # JSON processor
+brew "unzip"         # Archive extraction
+
+# === GUI Applications (macOS only) ===
+cask "kitty"         # Terminal emulator
+cask "obsidian"      # Notes
+cask "notion"        # Productivity
+
+# === Fonts ===
+cask "font-hack-nerd-font"
+cask "font-jetbrains-mono-nerd-font"

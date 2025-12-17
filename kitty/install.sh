@@ -48,24 +48,49 @@ fi
 
 # 1. Install Kitty
 print_step "Installing Kitty terminal..."
-if command -v kitty &>/dev/null; then
-    print_warning "Kitty already installed ($(kitty --version | head -1))"
+
+# Helper to get kitty binary path
+get_kitty_bin() {
+    if command -v kitty &>/dev/null; then
+        command -v kitty
+    elif is_macos && [[ -x "/Applications/kitty.app/Contents/MacOS/kitty" ]]; then
+        echo "/Applications/kitty.app/Contents/MacOS/kitty"
+    elif [[ -x "$KITTY_APP_DIR/bin/kitty" ]]; then
+        echo "$KITTY_APP_DIR/bin/kitty"
+    fi
+}
+
+KITTY_BIN="$(get_kitty_bin)"
+
+if [[ -n "$KITTY_BIN" ]]; then
+    print_warning "Kitty already installed ($("$KITTY_BIN" --version | head -1))"
 else
     if is_macos; then
         # macOS: Use Homebrew Cask
         ensure_homebrew
-        init_brew || true
+        if ! init_brew; then
+            print_warn "Brew not initialized in current session - may need manual setup"
+        fi
         pkg_install_cask kitty
     else
         # Linux: Use installer script
         curl -L https://sw.kovidgoyal.net/kitty/installer.sh | sh /dev/stdin launch=n
     fi
+    KITTY_BIN="$(get_kitty_bin)"
     print_info "Kitty installed"
 fi
 
-# Create symlinks to ~/.local/bin (Linux only - macOS Homebrew handles this)
-if is_linux; then
-    print_step "Creating symlinks..."
+# Create symlinks to ~/.local/bin for CLI access
+print_step "Creating CLI symlinks..."
+if is_macos; then
+    # macOS: Link from /Applications/kitty.app
+    if [[ -x "/Applications/kitty.app/Contents/MacOS/kitty" ]]; then
+        ln -sf "/Applications/kitty.app/Contents/MacOS/kitty" "$KITTY_BIN_DIR/kitty"
+        ln -sf "/Applications/kitty.app/Contents/MacOS/kitten" "$KITTY_BIN_DIR/kitten"
+        print_info "Symlinks created in $KITTY_BIN_DIR"
+    fi
+else
+    # Linux: Link from ~/.local/kitty.app
     ln -sf "$KITTY_APP_DIR/bin/kitty" "$KITTY_BIN_DIR/kitty"
     ln -sf "$KITTY_APP_DIR/bin/kitten" "$KITTY_BIN_DIR/kitten"
     print_info "Symlinks created in $KITTY_BIN_DIR"
@@ -132,41 +157,22 @@ fi
 
 # 3. Symlink configuration
 print_step "Linking configuration..."
-if [ -f "$KITTY_CONFIG_DIR/kitty.conf" ] && [ ! -L "$KITTY_CONFIG_DIR/kitty.conf" ]; then
-    cp "$KITTY_CONFIG_DIR/kitty.conf" "$KITTY_CONFIG_DIR/kitty.conf.backup.$(date +%Y%m%d_%H%M%S)"
-    print_warning "Backed up existing kitty.conf"
-fi
-ln -sf "$SCRIPT_DIR/kitty.conf" "$KITTY_CONFIG_DIR/kitty.conf"
-print_info "Config linked from repo"
+symlink_with_backup "$SCRIPT_DIR/kitty.conf" "$KITTY_CONFIG_DIR/kitty.conf"
 
 # 4. Create desktop entry (Linux only - macOS uses Applications folder)
 if is_linux; then
     print_step "Creating desktop entry..."
-    cat > "$DESKTOP_DIR/kitty.desktop" << EOF
-[Desktop Entry]
-Version=1.0
-Type=Application
-Name=Kitty
-GenericName=Terminal Emulator
-Comment=Fast, feature-rich, GPU based terminal
-Exec=$KITTY_BIN_DIR/kitty
-TryExec=$KITTY_BIN_DIR/kitty
-Icon=kitty
-Terminal=false
-Categories=System;TerminalEmulator;
-Keywords=terminal;shell;command line;
-StartupWMClass=kitty
-EOF
 
     # Copy icon if available
+    ICON_PATH="kitty"  # Use system icon name as default
     if [ -f "$KITTY_APP_DIR/share/icons/hicolor/256x256/apps/kitty.png" ]; then
         mkdir -p "$XDG_DATA_HOME/icons/hicolor/256x256/apps"
         cp "$KITTY_APP_DIR/share/icons/hicolor/256x256/apps/kitty.png" \
            "$XDG_DATA_HOME/icons/hicolor/256x256/apps/kitty.png"
+        ICON_PATH="$XDG_DATA_HOME/icons/hicolor/256x256/apps/kitty.png"
     fi
 
-    update-desktop-database "$DESKTOP_DIR" 2>/dev/null || true
-    print_info "Desktop entry created"
+    create_desktop_entry "Kitty" "$KITTY_BIN_DIR/kitty" "$ICON_PATH" "System;TerminalEmulator"
 fi
 
 # Summary
@@ -176,7 +182,7 @@ print_info "Kitty setup complete!"
 echo "======================================"
 echo ""
 print_info "Installed:"
-echo "  • Kitty: $(kitty --version 2>/dev/null | head -1 || echo 'check PATH')"
+echo "  • Kitty: $("$KITTY_BIN" --version 2>/dev/null | head -1 || echo 'check installation')"
 echo "  • Config: $KITTY_CONFIG_DIR/kitty.conf"
 echo "  • Fonts: $FONT_DIR"
 if is_linux; then

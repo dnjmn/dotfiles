@@ -5,7 +5,7 @@
 # This script helps you install and configure all developer tools
 # Date: 2025-11-07
 
-set -e  # Exit on error
+set -euo pipefail  # Fail fast: exit on error, undefined vars, pipe failures
 
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -64,6 +64,7 @@ ARCH_NAME="$(detect_arch)"
 echo -e "${BOLD}Platform:${NC} ${OS_NAME} (${ARCH_NAME})"
 echo ""
 echo -e "${BOLD}Available installations:${NC}"
+echo "  0. Homebrew (Package manager - prerequisite for other tools)"
 echo "  1. Zsh Shell (with Oh My Zsh, Powerlevel10k, plugins)"
 echo "  2. Kitty Terminal (GPU-accelerated terminal emulator)"
 echo "  3. Tmux (Terminal multiplexer with sensible defaults)"
@@ -84,6 +85,7 @@ elif [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     echo "Options:"
     echo "  -a, --all         Install all tools without prompting"
     echo "  -h, --help        Show this help message"
+    echo "  --homebrew        Install only Homebrew"
     echo "  --zsh             Install only Zsh"
     echo "  --kitty           Install only Kitty Terminal"
     echo "  --tmux            Install only Tmux"
@@ -99,7 +101,17 @@ elif [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     echo "  ./install.sh --neovim     # Install only Neovim"
     echo "  ./install.sh --claude     # Install only Claude Code"
     exit 0
+elif [ "$1" = "--homebrew" ]; then
+    INSTALL_HOMEBREW=true
+    INSTALL_ZSH=false
+    INSTALL_KITTY=false
+    INSTALL_TMUX=false
+    INSTALL_OBSIDIAN=false
+    INSTALL_NEOVIM=false
+    INSTALL_CLAUDE=false
+    INTERACTIVE=false
 elif [ "$1" = "--zsh" ]; then
+    INSTALL_HOMEBREW=false
     INSTALL_ZSH=true
     INSTALL_KITTY=false
     INSTALL_TMUX=false
@@ -108,6 +120,7 @@ elif [ "$1" = "--zsh" ]; then
     INSTALL_CLAUDE=false
     INTERACTIVE=false
 elif [ "$1" = "--kitty" ]; then
+    INSTALL_HOMEBREW=false
     INSTALL_ZSH=false
     INSTALL_KITTY=true
     INSTALL_TMUX=false
@@ -116,6 +129,7 @@ elif [ "$1" = "--kitty" ]; then
     INSTALL_CLAUDE=false
     INTERACTIVE=false
 elif [ "$1" = "--tmux" ]; then
+    INSTALL_HOMEBREW=false
     INSTALL_ZSH=false
     INSTALL_KITTY=false
     INSTALL_TMUX=true
@@ -124,6 +138,7 @@ elif [ "$1" = "--tmux" ]; then
     INSTALL_CLAUDE=false
     INTERACTIVE=false
 elif [ "$1" = "--obsidian" ]; then
+    INSTALL_HOMEBREW=false
     INSTALL_ZSH=false
     INSTALL_KITTY=false
     INSTALL_TMUX=false
@@ -132,6 +147,7 @@ elif [ "$1" = "--obsidian" ]; then
     INSTALL_CLAUDE=false
     INTERACTIVE=false
 elif [ "$1" = "--neovim" ]; then
+    INSTALL_HOMEBREW=false
     INSTALL_ZSH=false
     INSTALL_KITTY=false
     INSTALL_TMUX=false
@@ -140,6 +156,7 @@ elif [ "$1" = "--neovim" ]; then
     INSTALL_CLAUDE=false
     INTERACTIVE=false
 elif [ "$1" = "--claude" ]; then
+    INSTALL_HOMEBREW=false
     INSTALL_ZSH=false
     INSTALL_KITTY=false
     INSTALL_TMUX=false
@@ -155,6 +172,17 @@ fi
 if [ "$INTERACTIVE" = true ]; then
     echo -e "${BOLD}What would you like to install?${NC}"
     echo ""
+
+    # Homebrew
+    while true; do
+        read -p "Install Homebrew? (y/n): " -n 1 -r
+        echo
+        case $REPLY in
+            [Yy]* ) INSTALL_HOMEBREW=true; break;;
+            [Nn]* ) INSTALL_HOMEBREW=false; break;;
+            * ) echo "Please answer y or n.";;
+        esac
+    done
 
     # Zsh
     while true; do
@@ -225,6 +253,7 @@ if [ "$INTERACTIVE" = true ]; then
     # Confirm
     echo ""
     print_info "Installation Summary:"
+    [ "$INSTALL_HOMEBREW" = true ] && echo "  ✓ Homebrew"
     [ "$INSTALL_ZSH" = true ] && echo "  ✓ Zsh Shell"
     [ "$INSTALL_KITTY" = true ] && echo "  ✓ Kitty Terminal"
     [ "$INSTALL_TMUX" = true ] && echo "  ✓ Tmux"
@@ -243,6 +272,7 @@ if [ "$INTERACTIVE" = true ]; then
         esac
     done
 elif [ "$INSTALL_ALL" = true ]; then
+    INSTALL_HOMEBREW=true
     INSTALL_ZSH=true
     INSTALL_KITTY=true
     INSTALL_TMUX=true
@@ -252,25 +282,43 @@ elif [ "$INSTALL_ALL" = true ]; then
 fi
 
 # Check if anything is selected
-if [ "$INSTALL_ZSH" != true ] && [ "$INSTALL_KITTY" != true ] && [ "$INSTALL_TMUX" != true ] && [ "$INSTALL_OBSIDIAN" != true ] && [ "$INSTALL_NEOVIM" != true ] && [ "$INSTALL_CLAUDE" != true ]; then
+if [ "$INSTALL_HOMEBREW" != true ] && [ "$INSTALL_ZSH" != true ] && [ "$INSTALL_KITTY" != true ] && [ "$INSTALL_TMUX" != true ] && [ "$INSTALL_OBSIDIAN" != true ] && [ "$INSTALL_NEOVIM" != true ] && [ "$INSTALL_CLAUDE" != true ]; then
     print_warning "Nothing selected to install. Exiting."
     exit 0
 fi
 
-# System setup - ensure Homebrew is available
-print_header "System Setup"
-if is_macos; then
-    print_step "Ensuring Xcode CLI tools are installed..."
-    ensure_xcode_cli
-fi
-print_step "Ensuring Homebrew is installed..."
-ensure_homebrew
-# Initialize brew for this session
-init_brew || true
-
 # Track installation status
 INSTALLATIONS_SUCCEEDED=()
 INSTALLATIONS_FAILED=()
+
+# Install Homebrew (explicitly selected or as prerequisite)
+if [ "$INSTALL_HOMEBREW" = true ]; then
+    print_header "Installing Homebrew"
+
+    if [ -f "$SCRIPT_DIR/homebrew/install.sh" ]; then
+        if bash "$SCRIPT_DIR/homebrew/install.sh"; then
+            INSTALLATIONS_SUCCEEDED+=("Homebrew")
+            print_success "Homebrew installation completed"
+        else
+            INSTALLATIONS_FAILED+=("Homebrew")
+            print_error "Homebrew installation failed"
+        fi
+    else
+        print_error "Homebrew installation script not found at $SCRIPT_DIR/homebrew/install.sh"
+        INSTALLATIONS_FAILED+=("Homebrew")
+    fi
+else
+    # Ensure Homebrew is available as prerequisite for other tools
+    print_header "System Setup"
+    if is_macos; then
+        print_step "Ensuring Xcode CLI tools are installed..."
+        ensure_xcode_cli
+    fi
+    print_step "Ensuring Homebrew is installed..."
+    ensure_homebrew
+fi
+# Initialize brew for this session
+init_brew || true
 
 # Install Zsh
 if [ "$INSTALL_ZSH" = true ]; then
@@ -401,6 +449,14 @@ fi
 
 # Post-installation notes
 print_header "Next Steps"
+
+if [ "$INSTALL_HOMEBREW" = true ]; then
+    echo -e "${BOLD}Homebrew:${NC}"
+    echo "  1. Verify: brew --version"
+    echo "  2. Update: brew update"
+    echo "  3. Install packages: brew install <package>"
+    echo ""
+fi
 
 if [ "$INSTALL_ZSH" = true ]; then
     echo -e "${BOLD}Zsh:${NC}"

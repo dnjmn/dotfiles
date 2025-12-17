@@ -6,7 +6,7 @@
 # Everything follows XDG Base Directory specification to keep home directory clean
 # Date: 2025-11-13
 
-set -e  # Exit on error
+set -euo pipefail  # Fail fast: exit on error, undefined vars, pipe failures
 
 # Get script directory (where this install.sh is located)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -39,7 +39,9 @@ echo ""
 # Ensure Homebrew is available
 print_info "Ensuring Homebrew is available..."
 ensure_homebrew
-init_brew || true
+if ! init_brew; then
+    print_warn "Brew not initialized in current session - may need manual setup"
+fi
 
 # Create necessary XDG directories
 print_step "Creating XDG directory structure..."
@@ -56,22 +58,9 @@ else
     print_info "tmux installed: $(tmux -V)"
 fi
 
-# 2. Copy tmux configuration
+# 2. Link tmux configuration
 print_step "Setting up tmux configuration..."
-if [ -f "$TMUX_CONFIG_DIR/tmux.conf" ]; then
-    # Backup existing config
-    cp "$TMUX_CONFIG_DIR/tmux.conf" "$TMUX_CONFIG_DIR/tmux.conf.backup.$(date +%Y%m%d_%H%M%S)"
-    print_warning "Backed up existing tmux.conf"
-fi
-
-# Create symlink to our config in the repo
-if [ -f "$SCRIPT_DIR/tmux.conf" ]; then
-    ln -sf "$SCRIPT_DIR/tmux.conf" "$TMUX_CONFIG_DIR/tmux.conf"
-    print_info "Linked tmux.conf from repo to $TMUX_CONFIG_DIR/tmux.conf"
-else
-    print_error "tmux.conf not found in $SCRIPT_DIR"
-    exit 1
-fi
+symlink_with_backup "$SCRIPT_DIR/tmux.conf" "$TMUX_CONFIG_DIR/tmux.conf"
 
 # 3. Install TPM (Tmux Plugin Manager)
 print_step "Installing TPM (Tmux Plugin Manager)..."
