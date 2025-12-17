@@ -1,10 +1,17 @@
 #!/bin/bash
 
-# Ubuntu Setup - Master Installation Script
+# Dotfiles - Master Installation Script
+# Cross-platform setup for macOS and Linux
 # This script helps you install and configure all developer tools
 # Date: 2025-11-07
 
 set -e  # Exit on error
+
+# Get script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Source platform helper
+source "$SCRIPT_DIR/lib/platform.sh"
 
 # Colors for output
 RED='\033[0;31m'
@@ -45,14 +52,16 @@ print_step() {
     echo -e "${BLUE}[STEP]${NC} $1"
 }
 
-# Get script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
 # Welcome message
 clear
-print_header "Ubuntu Developer Setup"
-echo -e "${CYAN}Welcome to the Ubuntu Developer Setup script!${NC}"
+print_header "Developer Setup"
+echo -e "${CYAN}Welcome to the Developer Setup script!${NC}"
 echo "This script will help you install and configure developer tools."
+echo ""
+# Show platform info
+OS_NAME="$(detect_os)"
+ARCH_NAME="$(detect_arch)"
+echo -e "${BOLD}Platform:${NC} ${OS_NAME} (${ARCH_NAME})"
 echo ""
 echo -e "${BOLD}Available installations:${NC}"
 echo "  1. Zsh Shell (with Oh My Zsh, Powerlevel10k, plugins)"
@@ -248,10 +257,16 @@ if [ "$INSTALL_ZSH" != true ] && [ "$INSTALL_KITTY" != true ] && [ "$INSTALL_TMU
     exit 0
 fi
 
-# System update
-print_header "System Update"
-print_step "Updating package lists..."
-sudo apt update
+# System setup - ensure Homebrew is available
+print_header "System Setup"
+if is_macos; then
+    print_step "Ensuring Xcode CLI tools are installed..."
+    ensure_xcode_cli
+fi
+print_step "Ensuring Homebrew is installed..."
+ensure_homebrew
+# Initialize brew for this session
+init_brew || true
 
 # Track installation status
 INSTALLATIONS_SUCCEEDED=()

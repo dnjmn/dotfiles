@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Dotfiles repo for **one-command Ubuntu setup** on new machines.
+Dotfiles repo for **one-command setup** on new machines. Supports **macOS** and **Linux**.
 
 ## Core Philosophy: Script Everything
 
@@ -8,11 +8,21 @@ Dotfiles repo for **one-command Ubuntu setup** on new machines.
 
 If you can't script it, document the manual step in `docs/` with a `TODO: automate` note—but always try to automate first.
 
+### Platform Support
+
+| Platform | Package Manager | Status |
+|----------|----------------|--------|
+| macOS (Apple Silicon) | Homebrew | ✅ Supported |
+| macOS (Intel) | Homebrew | ✅ Supported |
+| Linux (Ubuntu/Debian) | Linuxbrew | ✅ Supported |
+
+All software is installed at **user level** - no sudo/root required.
+
 ### What "Script Everything" Means
 
 | Scenario | Approach |
 |----------|----------|
-| Installing a package | `apt install` or download script in `install.sh` |
+| Installing a package | `pkg_install` (Homebrew/Linuxbrew abstraction) |
 | Config files | Store in repo, symlink via script |
 | Interactive installers | Use `--unattended`, `-y`, or heredoc for input |
 | GUI-only settings | Export via `dconf dump`, `gsettings`, or config files |
@@ -78,17 +88,15 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
 
-# Colors
-print_info() { echo -e "\e[34m[INFO]\e[0m $1"; }
-print_ok() { echo -e "\e[32m[OK]\e[0m $1"; }
-print_error() { echo -e "\e[31m[ERROR]\e[0m $1"; }
-print_warn() { echo -e "\e[33m[WARN]\e[0m $1"; }
+# Source platform helper (provides print_*, pkg_install, is_macos, etc.)
+source "$REPO_DIR/lib/platform.sh"
 
-# XDG defaults
-XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
-XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
-XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
-XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
+# Print platform info
+print_platform_info
+
+# Ensure Homebrew is available
+ensure_homebrew
+init_brew || true
 
 # Idempotency check
 if command -v <tool> &>/dev/null; then
@@ -98,7 +106,11 @@ fi
 
 # 1. Install binary/package
 print_info "Installing <tool>..."
-# apt/curl/wget commands here
+if is_macos; then
+    pkg_install <tool>  # or pkg_install_cask for GUI apps
+else
+    pkg_install <tool>  # Linuxbrew
+fi
 
 # 2. Create XDG directories
 mkdir -p "$XDG_CONFIG_HOME/<tool>"

@@ -1,34 +1,45 @@
 #!/bin/bash
 
 # Obsidian Installation Script
-# Downloads latest AppImage from GitHub and sets up desktop integration
+# Cross-platform: macOS (Homebrew Cask) and Linux (AppImage)
 # Date: 2025-11-26
 
 set -euo pipefail
+
+# Get script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Source platform helper
+source "$REPO_DIR/lib/platform.sh"
 
 echo "======================================"
 echo "Obsidian Setup Script"
 echo "======================================"
 echo ""
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+# Print platform info
+print_platform_info
 
-print_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
-print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
-print_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
-print_step() { echo -e "${BLUE}[STEP]${NC} $1"; }
+# macOS: Use Homebrew Cask
+if is_macos; then
+    print_step "Installing Obsidian via Homebrew Cask..."
+    ensure_homebrew
+    init_brew || true
+    pkg_install_cask obsidian
 
-# Get script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    echo ""
+    echo "======================================"
+    print_info "Obsidian setup complete!"
+    echo "======================================"
+    echo ""
+    print_info "Launch: Open from Applications folder or Spotlight"
+    print_info "Vaults: Create anywhere, typically ~/Documents/Obsidian/"
+    echo ""
+    exit 0
+fi
 
-# XDG directories
-XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
-XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
+# Linux: AppImage installation
 LOCAL_BIN="$HOME/.local/bin"
 
 # Obsidian paths
@@ -45,12 +56,7 @@ echo ""
 
 # Check dependencies
 print_step "Checking dependencies..."
-for cmd in curl jq; do
-    if ! command -v "$cmd" &>/dev/null; then
-        print_info "Installing $cmd..."
-        sudo apt update && sudo apt install -y "$cmd"
-    fi
-done
+pkg_install curl jq
 
 # Create directories
 print_step "Creating directories..."
@@ -72,7 +78,7 @@ print_info "Latest version: $LATEST_VERSION"
 
 # Check if already installed with same version
 if [ -f "$APPIMAGE_PATH" ]; then
-    CURRENT_VERSION=$("$APPIMAGE_PATH" --version 2>/dev/null | grep -oP '\d+\.\d+\.\d+' || echo "unknown")
+    CURRENT_VERSION=$("$APPIMAGE_PATH" --version 2>/dev/null | sed 's/.*\([0-9]*\.[0-9]*\.[0-9]*\).*/\1/' || echo "unknown")
     if [ "$CURRENT_VERSION" = "$LATEST_VERSION" ]; then
         print_warning "Obsidian $LATEST_VERSION already installed"
         print_info "Run with --force to reinstall"

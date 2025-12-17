@@ -54,17 +54,21 @@ export WGETRC="$XDG_CONFIG_HOME/wget/wgetrc"
 
 # ===== PATH CONFIGURATION =====
 
-# Homebrew
-if [[ -x /home/linuxbrew/.linuxbrew/bin/brew ]]; then
+# Homebrew - Cross-platform detection
+# macOS Apple Silicon
+if [[ -x /opt/homebrew/bin/brew ]]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+# macOS Intel
+elif [[ -x /usr/local/bin/brew ]]; then
+  eval "$(/usr/local/bin/brew shellenv)"
+# Linux (Linuxbrew)
+elif [[ -x /home/linuxbrew/.linuxbrew/bin/brew ]]; then
   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 fi
 
 # Go
 export GOPATH="$HOME/go"
 export PATH="/usr/local/go/bin:$GOPATH/bin:$PATH"
-
-# Neovim
-export PATH="$HOME/Downloads/nvim-linux-x86_64/bin:$PATH"
 
 # Cargo (Rust)
 if [[ -f "$HOME/.cargo/env" ]]; then

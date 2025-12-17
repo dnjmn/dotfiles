@@ -1,8 +1,18 @@
-# Ubuntu Setup
+# Dotfiles
 
-Custom configurations and dotfiles for Ubuntu to enhance developer productivity.
+Cross-platform dotfiles and configurations for **macOS** and **Linux**.
 
-This repository serves as a central location for all Ubuntu configuration files and setup documentation. Designed for quick setup on new machines with automated installation scripts.
+This repository serves as a central location for all configuration files and setup documentation. Designed for quick setup on new machines with automated installation scripts.
+
+## Platform Support
+
+| Platform | Status |
+|----------|--------|
+| macOS (Apple Silicon) | ✅ Supported |
+| macOS (Intel) | ✅ Supported |
+| Linux (Ubuntu/Debian) | ✅ Supported |
+
+All software is installed at **user level** - no sudo/root required.
 
 ## Quick Start
 
@@ -52,6 +62,9 @@ Each software/tool includes:
 ## Documentation
 
 See the [`docs/`](docs/) folder for detailed setup guides:
+
+### Platform-Specific
+- [macOS Setup Guide](docs/macos-setup.md) - macOS-specific instructions and troubleshooting
 
 ### Kitty Terminal
 - [Kitty Terminal Setup](docs/kitty-terminal-setup.md)

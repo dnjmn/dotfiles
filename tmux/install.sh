@@ -1,48 +1,27 @@
 #!/bin/bash
 
 # Tmux Installation Script with XDG Base Directory Support
+# Cross-platform: macOS and Linux (via Homebrew/Linuxbrew)
 # This script installs and configures tmux with sensible defaults and TPM (Tmux Plugin Manager)
 # Everything follows XDG Base Directory specification to keep home directory clean
 # Date: 2025-11-13
 
 set -e  # Exit on error
 
+# Get script directory (where this install.sh is located)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Source platform helper
+source "$REPO_DIR/lib/platform.sh"
+
 echo "======================================"
 echo "Tmux Setup Script (XDG Compliant)"
 echo "======================================"
 echo ""
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-# Function to print colored output
-print_info() {
-    echo -e "${GREEN}[INFO]${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
-print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-print_step() {
-    echo -e "${BLUE}[STEP]${NC} $1"
-}
-
-# Get script directory (where this install.sh is located)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# Set up XDG directories
-export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
-export XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
-export XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
+# Print platform info
+print_platform_info
 
 # Tmux directories
 TMUX_CONFIG_DIR="$XDG_CONFIG_HOME/tmux"
@@ -57,11 +36,10 @@ echo "  • Tmux Config: $TMUX_CONFIG_DIR"
 echo "  • Tmux Plugins: $TMUX_PLUGIN_DIR"
 echo ""
 
-# Check if running on Ubuntu/Debian
-if ! command -v apt &> /dev/null; then
-    print_error "This script is designed for Ubuntu/Debian systems with apt package manager"
-    exit 1
-fi
+# Ensure Homebrew is available
+print_info "Ensuring Homebrew is available..."
+ensure_homebrew
+init_brew || true
 
 # Create necessary XDG directories
 print_step "Creating XDG directory structure..."
@@ -74,8 +52,7 @@ print_step "Installing tmux package..."
 if command -v tmux &> /dev/null; then
     print_warning "tmux is already installed ($(tmux -V))"
 else
-    sudo apt update
-    sudo apt install -y tmux
+    pkg_install tmux
     print_info "tmux installed: $(tmux -V)"
 fi
 

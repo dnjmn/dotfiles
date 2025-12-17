@@ -1,36 +1,26 @@
 #!/bin/bash
 
 # Neovim Installation Script with LazyVim Configuration
+# Cross-platform: macOS and Linux (via Homebrew/Linuxbrew)
 # Installs Neovim, dependencies, and configures LazyVim setup
 # Date: 2025-11-26
 
 set -euo pipefail
+
+# Get script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Source platform helper
+source "$REPO_DIR/lib/platform.sh"
 
 echo "======================================"
 echo "Neovim Setup (LazyVim + XDG Compliant)"
 echo "======================================"
 echo ""
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-print_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
-print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
-print_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
-print_step() { echo -e "${BLUE}[STEP]${NC} $1"; }
-
-# Get script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# XDG directories
-export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
-export XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
-export XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
-export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
+# Print platform info
+print_platform_info
 
 # Paths
 NVIM_CONFIG_DIR="$XDG_CONFIG_HOME/nvim"
@@ -43,6 +33,11 @@ echo "  • Data: $NVIM_DATA_DIR"
 echo "  • Binary: $NVIM_BIN_DIR"
 echo ""
 
+# Ensure Homebrew is available
+print_info "Ensuring Homebrew is available..."
+ensure_homebrew
+init_brew || true
+
 # Create directories
 print_step "Creating directories..."
 mkdir -p "$NVIM_BIN_DIR"
@@ -52,13 +47,7 @@ mkdir -p "$XDG_CACHE_HOME/nvim"
 
 # 1. Install Neovim dependencies
 print_step "Installing dependencies..."
-DEPS="ripgrep fd-find git curl unzip"
-for dep in $DEPS; do
-    if ! dpkg -l | grep -q "^ii  $dep "; then
-        print_info "Installing $dep..."
-        sudo apt-get install -y "$dep" >/dev/null 2>&1
-    fi
-done
+pkg_install ripgrep fd git curl unzip
 print_info "Dependencies installed"
 
 # 2. Install Neovim
@@ -72,7 +61,8 @@ check_nvim_version() {
         return 1
     fi
     local version
-    version=$(nvim --version | head -1 | grep -oP '\d+\.\d+\.\d+' | head -1)
+    # Cross-platform version extraction (works on both macOS and Linux)
+    version=$(nvim --version | head -1 | sed 's/.*v\([0-9]*\.[0-9]*\.[0-9]*\).*/\1/')
     if [ -z "$version" ]; then
         return 1
     fi
@@ -83,17 +73,19 @@ check_nvim_version() {
 if check_nvim_version; then
     print_warning "Neovim already installed ($(nvim --version | head -1))"
 else
-    print_info "Installing Neovim via AppImage..."
-
-    # Download latest stable AppImage
-    NVIM_APPIMAGE="$NVIM_BIN_DIR/nvim.appimage"
-    curl -fsSL "https://github.com/neovim/neovim/releases/latest/download/nvim.appimage" -o "$NVIM_APPIMAGE"
-    chmod +x "$NVIM_APPIMAGE"
-
-    # Create symlink
-    ln -sf "$NVIM_APPIMAGE" "$NVIM_BIN_DIR/nvim"
-
-    print_info "Neovim installed: $($NVIM_BIN_DIR/nvim --version | head -1)"
+    if is_macos; then
+        # macOS: Use Homebrew
+        print_info "Installing Neovim via Homebrew..."
+        pkg_install neovim
+    else
+        # Linux: Use AppImage for latest version
+        print_info "Installing Neovim via AppImage..."
+        NVIM_APPIMAGE="$NVIM_BIN_DIR/nvim.appimage"
+        curl -fsSL "https://github.com/neovim/neovim/releases/latest/download/nvim.appimage" -o "$NVIM_APPIMAGE"
+        chmod +x "$NVIM_APPIMAGE"
+        ln -sf "$NVIM_APPIMAGE" "$NVIM_BIN_DIR/nvim"
+    fi
+    print_info "Neovim installed: $(nvim --version | head -1)"
 fi
 
 # 3. Link configuration from repo

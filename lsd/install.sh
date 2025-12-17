@@ -1,39 +1,32 @@
 #!/bin/bash
 
 # LSD (LSDeluxe) Installation Script
+# Cross-platform: macOS (Homebrew) and Linux (binary download)
 # Modern replacement for ls with icons and colors
 # Date: 2025-11-26
 
 set -euo pipefail
+
+# Get script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Source platform helper
+source "$REPO_DIR/lib/platform.sh"
 
 echo "======================================"
 echo "LSD (LSDeluxe) Setup"
 echo "======================================"
 echo ""
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
-
-print_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
-print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
-print_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
-print_step() { echo -e "${BLUE}[STEP]${NC} $1"; }
-
-# Get script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# XDG directories
-export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+# Print platform info
+print_platform_info
 
 # Paths
 LSD_BIN_DIR="$HOME/.local/bin"
 LSD_CONFIG_DIR="$XDG_CONFIG_HOME/lsd"
 
-# Pinned version
+# Pinned version (for Linux binary download)
 LSD_VERSION="v1.1.5"
 
 mkdir -p "$LSD_BIN_DIR"
@@ -44,32 +37,41 @@ print_step "Checking LSD installation..."
 if command -v lsd &>/dev/null; then
     print_warning "LSD already installed ($(lsd --version | head -1))"
 else
-    print_info "Installing LSD ${LSD_VERSION}..."
+    if is_macos; then
+        # macOS: Use Homebrew
+        print_info "Installing LSD via Homebrew..."
+        ensure_homebrew
+        init_brew || true
+        pkg_install lsd
+    else
+        # Linux: Download binary
+        print_info "Installing LSD ${LSD_VERSION}..."
 
-    tmp_dir=$(mktemp -d)
-    arch=$(dpkg --print-architecture)
+        tmp_dir=$(mktemp -d)
+        arch=$(detect_arch)
 
-    # Map architecture
-    case "$arch" in
-        amd64) arch="x86_64" ;;
-        arm64) arch="aarch64" ;;
-        *) print_error "Unsupported architecture: $arch"; exit 1 ;;
-    esac
+        # Map architecture for lsd binary naming
+        case "$arch" in
+            x86_64) arch="x86_64" ;;
+            arm64)  arch="aarch64" ;;
+            *)      print_error "Unsupported architecture: $arch"; exit 1 ;;
+        esac
 
-    download_url="https://github.com/lsd-rs/lsd/releases/download/${LSD_VERSION}/lsd-${LSD_VERSION}-${arch}-unknown-linux-gnu.tar.gz"
+        download_url="https://github.com/lsd-rs/lsd/releases/download/${LSD_VERSION}/lsd-${LSD_VERSION}-${arch}-unknown-linux-gnu.tar.gz"
 
-    if ! curl -fsSL "$download_url" -o "$tmp_dir/lsd.tar.gz"; then
-        print_error "Failed to download LSD"
+        if ! curl -fsSL "$download_url" -o "$tmp_dir/lsd.tar.gz"; then
+            print_error "Failed to download LSD"
+            rm -rf "$tmp_dir"
+            exit 1
+        fi
+
+        tar -xzf "$tmp_dir/lsd.tar.gz" -C "$tmp_dir"
+        cp "$tmp_dir/lsd-${LSD_VERSION}-${arch}-unknown-linux-gnu/lsd" "$LSD_BIN_DIR/lsd"
+        chmod +x "$LSD_BIN_DIR/lsd"
+
         rm -rf "$tmp_dir"
-        exit 1
     fi
-
-    tar -xzf "$tmp_dir/lsd.tar.gz" -C "$tmp_dir"
-    cp "$tmp_dir/lsd-${LSD_VERSION}-${arch}-unknown-linux-gnu/lsd" "$LSD_BIN_DIR/lsd"
-    chmod +x "$LSD_BIN_DIR/lsd"
-
-    rm -rf "$tmp_dir"
-    print_info "LSD installed to $LSD_BIN_DIR/lsd"
+    print_info "LSD installed"
 fi
 
 # Create config if not exists

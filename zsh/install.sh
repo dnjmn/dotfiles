@@ -1,49 +1,27 @@
 #!/bin/bash
 
 # Zsh Installation Script with XDG Base Directory Support
+# Cross-platform: macOS and Linux (via Homebrew/Linuxbrew)
 # This script installs and configures zsh with Oh My Zsh, Powerlevel10k, and useful plugins
 # Everything follows XDG Base Directory specification to keep home directory clean
 # Date: 2025-11-07
 
 set -e  # Exit on error
 
+# Get script directory (where this install.sh is located)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Source platform helper
+source "$REPO_DIR/lib/platform.sh"
+
 echo "======================================"
 echo "Zsh Setup Script (XDG Compliant)"
 echo "======================================"
 echo ""
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-# Function to print colored output
-print_info() {
-    echo -e "${GREEN}[INFO]${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
-print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-print_step() {
-    echo -e "${BLUE}[STEP]${NC} $1"
-}
-
-# Get script directory (where this install.sh is located)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# Set up XDG directories
-export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
-export XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
-export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
-export XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
+# Print platform info
+print_platform_info
 
 # Set Oh My Zsh install location to XDG_DATA_HOME
 export ZSH="$XDG_DATA_HOME/oh-my-zsh"
@@ -58,11 +36,10 @@ echo "  • Oh My Zsh: $ZSH"
 echo "  • ZDOTDIR: $SCRIPT_DIR"
 echo ""
 
-# Check if running on Ubuntu/Debian
-if ! command -v apt &> /dev/null; then
-    print_error "This script is designed for Ubuntu/Debian systems with apt package manager"
-    exit 1
-fi
+# Ensure Homebrew is available
+print_info "Ensuring Homebrew is available..."
+ensure_homebrew
+init_brew || true
 
 # Create necessary XDG directories
 print_step "Creating XDG directory structure..."
@@ -78,8 +55,7 @@ print_step "Installing zsh package..."
 if command -v zsh &> /dev/null; then
     print_warning "zsh is already installed ($(zsh --version))"
 else
-    sudo apt update
-    sudo apt install -y zsh
+    pkg_install zsh
     print_info "zsh installed: $(zsh --version)"
 fi
 
@@ -166,25 +142,22 @@ fi
 
 # 9. Install fzf (fuzzy finder)
 print_step "Installing fzf..."
-if command -v fzf &> /dev/null; then
-    print_warning "fzf is already installed"
-else
-    sudo apt install -y fzf
-    print_info "fzf installed"
-fi
+pkg_install fzf
 
-# 10. Install optional tools
+# 10. Install optional tools (fd, bat, tree)
 print_step "Installing optional tools (fd, bat, tree)..."
-sudo apt install -y fd-find bat tree 2>/dev/null || print_warning "Some optional tools may not be available"
+pkg_install fd bat tree
 
-# Create symlinks for fd and bat (Ubuntu uses different names)
-if command -v fdfind &> /dev/null && ! command -v fd &> /dev/null; then
+# Note: On Linux with apt, fd is called fd-find and bat is called batcat
+# Homebrew/Linuxbrew uses the correct names, so no symlinks needed
+# If using apt on Linux, create symlinks for compatibility
+if is_linux && command -v fdfind &> /dev/null && ! command -v fd &> /dev/null; then
     mkdir -p "$HOME/.local/bin"
     ln -sf "$(which fdfind)" "$HOME/.local/bin/fd"
     print_info "Created symlink: fd -> fdfind"
 fi
 
-if command -v batcat &> /dev/null && ! command -v bat &> /dev/null; then
+if is_linux && command -v batcat &> /dev/null && ! command -v bat &> /dev/null; then
     mkdir -p "$HOME/.local/bin"
     ln -sf "$(which batcat)" "$HOME/.local/bin/bat"
     print_info "Created symlink: bat -> batcat"
