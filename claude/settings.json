@@ -1,5 +1,8 @@
 {
-  "alwaysThinkingEnabled": true,
+  "statusLine": {
+    "type": "command",
+    "command": "bash ~/.claude/statusline.sh"
+  },
   "enabledPlugins": {
     "commit-commands@claude-plugins-official": true,
     "feature-dev@claude-plugins-official": true,
@@ -13,8 +16,6 @@
     "Notion@claude-plugins-official": true,
     "context7@claude-plugins-official": true
   },
-  "statusLine": {
-    "type": "command",
-    "command": "bash ~/.claude/statusline.sh"
-  }
+  "alwaysThinkingEnabled": true,
+  "model": "haiku"
 }

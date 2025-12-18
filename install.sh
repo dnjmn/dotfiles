@@ -71,7 +71,8 @@ echo "  3. Tmux (Terminal multiplexer with sensible defaults)"
 echo "  4. Obsidian (Knowledge base and note-taking)"
 echo "  5. Neovim (LazyVim configuration)"
 echo "  6. Claude Code (AI assistant configuration)"
-echo "  7. All of the above"
+echo "  7. Docker (Container runtime)"
+echo "  8. All of the above"
 echo ""
 
 # Initialize variables
@@ -95,6 +96,7 @@ elif [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     echo "  --obsidian        Install only Obsidian"
     echo "  --neovim          Install only Neovim"
     echo "  --claude          Install only Claude Code configs"
+    echo "  --docker          Install only Docker"
     echo ""
     echo "Examples:"
     echo "  ./install.sh              # Interactive mode"
@@ -112,6 +114,7 @@ elif [ "$1" = "--homebrew" ]; then
     INSTALL_OBSIDIAN=false
     INSTALL_NEOVIM=false
     INSTALL_CLAUDE=false
+    INSTALL_DOCKER=false
     INTERACTIVE=false
 elif [ "$1" = "--zsh" ]; then
     INSTALL_HOMEBREW=false
@@ -121,6 +124,7 @@ elif [ "$1" = "--zsh" ]; then
     INSTALL_OBSIDIAN=false
     INSTALL_NEOVIM=false
     INSTALL_CLAUDE=false
+    INSTALL_DOCKER=false
     INTERACTIVE=false
 elif [ "$1" = "--kitty" ]; then
     INSTALL_HOMEBREW=false
@@ -130,6 +134,7 @@ elif [ "$1" = "--kitty" ]; then
     INSTALL_OBSIDIAN=false
     INSTALL_NEOVIM=false
     INSTALL_CLAUDE=false
+    INSTALL_DOCKER=false
     INTERACTIVE=false
 elif [ "$1" = "--tmux" ]; then
     INSTALL_HOMEBREW=false
@@ -139,6 +144,7 @@ elif [ "$1" = "--tmux" ]; then
     INSTALL_OBSIDIAN=false
     INSTALL_NEOVIM=false
     INSTALL_CLAUDE=false
+    INSTALL_DOCKER=false
     INTERACTIVE=false
 elif [ "$1" = "--obsidian" ]; then
     INSTALL_HOMEBREW=false
@@ -148,6 +154,7 @@ elif [ "$1" = "--obsidian" ]; then
     INSTALL_OBSIDIAN=true
     INSTALL_NEOVIM=false
     INSTALL_CLAUDE=false
+    INSTALL_DOCKER=false
     INTERACTIVE=false
 elif [ "$1" = "--neovim" ]; then
     INSTALL_HOMEBREW=false
@@ -157,6 +164,7 @@ elif [ "$1" = "--neovim" ]; then
     INSTALL_OBSIDIAN=false
     INSTALL_NEOVIM=true
     INSTALL_CLAUDE=false
+    INSTALL_DOCKER=false
     INTERACTIVE=false
 elif [ "$1" = "--claude" ]; then
     INSTALL_HOMEBREW=false
@@ -166,6 +174,17 @@ elif [ "$1" = "--claude" ]; then
     INSTALL_OBSIDIAN=false
     INSTALL_NEOVIM=false
     INSTALL_CLAUDE=true
+    INSTALL_DOCKER=false
+    INTERACTIVE=false
+elif [ "$1" = "--docker" ]; then
+    INSTALL_HOMEBREW=false
+    INSTALL_ZSH=false
+    INSTALL_KITTY=false
+    INSTALL_TMUX=false
+    INSTALL_OBSIDIAN=false
+    INSTALL_NEOVIM=false
+    INSTALL_CLAUDE=false
+    INSTALL_DOCKER=true
     INTERACTIVE=false
 else
     INTERACTIVE=true
@@ -253,6 +272,17 @@ if [ "$INTERACTIVE" = true ]; then
         esac
     done
 
+    # Docker
+    while true; do
+        read -p "Install Docker? (y/n): " -n 1 -r
+        echo
+        case $REPLY in
+            [Yy]* ) INSTALL_DOCKER=true; break;;
+            [Nn]* ) INSTALL_DOCKER=false; break;;
+            * ) echo "Please answer y or n.";;
+        esac
+    done
+
     # Confirm
     echo ""
     print_info "Installation Summary:"
@@ -263,6 +293,7 @@ if [ "$INTERACTIVE" = true ]; then
     [ "$INSTALL_OBSIDIAN" = true ] && echo "  ✓ Obsidian"
     [ "$INSTALL_NEOVIM" = true ] && echo "  ✓ Neovim"
     [ "$INSTALL_CLAUDE" = true ] && echo "  ✓ Claude Code"
+    [ "$INSTALL_DOCKER" = true ] && echo "  ✓ Docker"
     echo ""
 
     while true; do
@@ -282,10 +313,11 @@ elif [ "$INSTALL_ALL" = true ]; then
     INSTALL_OBSIDIAN=true
     INSTALL_NEOVIM=true
     INSTALL_CLAUDE=true
+    INSTALL_DOCKER=true
 fi
 
 # Check if anything is selected
-if [ "$INSTALL_HOMEBREW" != true ] && [ "$INSTALL_ZSH" != true ] && [ "$INSTALL_KITTY" != true ] && [ "$INSTALL_TMUX" != true ] && [ "$INSTALL_OBSIDIAN" != true ] && [ "$INSTALL_NEOVIM" != true ] && [ "$INSTALL_CLAUDE" != true ]; then
+if [ "$INSTALL_HOMEBREW" != true ] && [ "$INSTALL_ZSH" != true ] && [ "$INSTALL_KITTY" != true ] && [ "$INSTALL_TMUX" != true ] && [ "$INSTALL_OBSIDIAN" != true ] && [ "$INSTALL_NEOVIM" != true ] && [ "$INSTALL_CLAUDE" != true ] && [ "$INSTALL_DOCKER" != true ]; then
     print_warning "Nothing selected to install. Exiting."
     exit 0
 fi
@@ -431,6 +463,24 @@ if [ "$INSTALL_CLAUDE" = true ]; then
     fi
 fi
 
+# Install Docker
+if [ "$INSTALL_DOCKER" = true ]; then
+    print_header "Installing Docker"
+
+    if [ -f "$SCRIPT_DIR/docker/install.sh" ]; then
+        if bash "$SCRIPT_DIR/docker/install.sh"; then
+            INSTALLATIONS_SUCCEEDED+=("Docker")
+            print_success "Docker installation completed"
+        else
+            INSTALLATIONS_FAILED+=("Docker")
+            print_error "Docker installation failed"
+        fi
+    else
+        print_error "Docker installation script not found at $SCRIPT_DIR/docker/install.sh"
+        INSTALLATIONS_FAILED+=("Docker")
+    fi
+fi
+
 # Summary
 print_header "Installation Summary"
 
@@ -510,6 +560,19 @@ if [ "$INSTALL_CLAUDE" = true ]; then
     echo "  2. Configs linked from dotfiles to ~/.claude/"
     echo "  3. Custom agents available (debugger, reviewers, etc.)"
     echo "  4. See docs/claude-setup.md for details"
+    echo ""
+fi
+
+if [ "$INSTALL_DOCKER" = true ]; then
+    echo -e "${BOLD}Docker:${NC}"
+    if is_macos; then
+        echo "  1. Launch Docker Desktop from Applications"
+        echo "  2. Complete the setup wizard"
+    else
+        echo "  1. Log out and back in (for docker group)"
+        echo "  2. Start daemon: sudo systemctl start docker"
+    fi
+    echo "  3. Verify: docker run hello-world"
     echo ""
 fi
 

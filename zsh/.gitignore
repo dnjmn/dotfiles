@@ -1,6 +1,7 @@
 # Zsh runtime files
 .zcompdump*
 .zsh_history
+.zsh_sessions/
 *.zwc
 .zcompcache/
 
