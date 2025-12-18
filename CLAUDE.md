@@ -1,5 +1,10 @@
 # CLAUDE.md
 
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+- software installation should happen via scripts and at user level only
+
+## Overview
+
 Dotfiles repo for **one-command setup** on new machines. Supports **macOS** and **Linux**.
 
 ## Core Philosophy: Script Everything
@@ -51,7 +56,54 @@ Every `<tool>/install.sh` must be:
 | Notion | `~/.local/share/notion/` | `notion/install.sh` | ✅ scripted |
 | Claude | `claude/` → `~/.claude/` | `claude/install.sh` | ✅ scripted |
 
-**Full setup**: `./install.sh --all`
+## Commands
+
+```bash
+# Full setup (new machine)
+./install.sh --all
+
+# Interactive mode (choose tools)
+./install.sh
+
+# Single tool installation
+./install.sh --zsh
+./install.sh --kitty
+./install.sh --tmux
+./install.sh --obsidian
+./install.sh --neovim
+./install.sh --claude
+./install.sh --homebrew
+```
+
+## Architecture
+
+### `lib/platform.sh` - Shared Foundation
+
+All install scripts source this file. It provides:
+
+| Function | Purpose |
+|----------|---------|
+| `detect_os`, `is_macos`, `is_linux` | Platform detection |
+| `detect_arch`, `is_arm64`, `is_x86_64` | Architecture detection |
+| `ensure_homebrew`, `init_brew` | Homebrew setup (XDG-compliant, user-level) |
+| `pkg_install`, `pkg_install_cask` | Idempotent package installation |
+| `symlink_with_backup` | Safe symlink with automatic backup |
+| `download_verified` | Download with optional SHA256 verification |
+| `get_github_release_url`, `get_github_release_version` | GitHub release fetching |
+| `print_info`, `print_ok`, `print_error`, `print_warn`, `print_step` | Consistent output formatting |
+
+XDG variables are exported: `$XDG_CONFIG_HOME`, `$XDG_DATA_HOME`, `$XDG_CACHE_HOME`, `$XDG_STATE_HOME`
+
+### Install Script Pattern
+
+Every `<tool>/install.sh` follows this structure:
+1. Source `lib/platform.sh`
+2. Ensure Homebrew available
+3. Idempotency check (skip if already installed)
+4. Install package via `pkg_install` or `pkg_install_cask`
+5. Create XDG directories
+6. Symlink config from repo to `~/.config/<tool>/`
+7. Install plugins if applicable
 
 ## Rules for Claude
 
@@ -80,79 +132,7 @@ docs/
 └── <tool>-setup.md     # Reference: shortcuts, troubleshooting, changelog
 ```
 
-## Install Script Template
-
-```bash
-#!/bin/bash
-set -euo pipefail
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_DIR="$(dirname "$SCRIPT_DIR")"
-
-# Source platform helper (provides print_*, pkg_install, is_macos, etc.)
-source "$REPO_DIR/lib/platform.sh"
-
-# Print platform info
-print_platform_info
-
-# Ensure Homebrew is available
-ensure_homebrew
-init_brew || true
-
-# Idempotency check
-if command -v <tool> &>/dev/null; then
-    print_ok "<tool> already installed ($(tool --version))"
-    # Still continue to ensure config is linked
-fi
-
-# 1. Install binary/package
-print_info "Installing <tool>..."
-if is_macos; then
-    pkg_install <tool>  # or pkg_install_cask for GUI apps
-else
-    pkg_install <tool>  # Linuxbrew
-fi
-
-# 2. Create XDG directories
-mkdir -p "$XDG_CONFIG_HOME/<tool>"
-mkdir -p "$XDG_DATA_HOME/<tool>"
-
-# 3. Symlink config from repo
-print_info "Linking configuration..."
-ln -sf "$SCRIPT_DIR/<tool>.conf" "$XDG_CONFIG_HOME/<tool>/<tool>.conf"
-
-# 4. Install plugins (if applicable)
-# print_info "Installing plugins..."
-
-print_ok "<tool> setup complete!"
-```
-
-## Doc Template
-
-```markdown
-# <Tool> Setup
-
-**Installed**: YYYY-MM-DD | **Version**: x.x.x
-
-## Quick Install
-\`\`\`bash
-./tool/install.sh
-\`\`\`
-
-## Config Locations
-| Type | Path |
-|------|------|
-| Config | `~/.config/<tool>/` |
-| Data | `~/.local/share/<tool>/` |
-
-## Key Shortcuts
-| Key | Action |
-|-----|--------|
-
-## Changelog
-| Date | Change |
-|------|--------|
-```
+When adding a new tool, reference existing install scripts (e.g., `tmux/install.sh`, `kitty/install.sh`) as templates.
 
 ## Current Stack
 - **Terminal**: Kitty + JetBrainsMono Nerd Font

@@ -49,6 +49,10 @@ export AWS_CONFIG_FILE="$XDG_CONFIG_HOME/aws/config"
 # Less
 export LESSHISTFILE="$XDG_STATE_HOME/less/history"
 
+# ===== DEFAULT EDITORS =====
+export EDITOR="nvim"
+export VISUAL="nvim"
+
 # Wget
 export WGETRC="$XDG_CONFIG_HOME/wget/wgetrc"
 

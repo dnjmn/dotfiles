@@ -74,6 +74,9 @@ echo "  6. Claude Code (AI assistant configuration)"
 echo "  7. All of the above"
 echo ""
 
+# Initialize variables
+INSTALL_ALL=false
+
 # Check if running in non-interactive mode
 if [ "$1" = "--all" ] || [ "$1" = "-a" ]; then
     print_info "Running in non-interactive mode (installing all)"
