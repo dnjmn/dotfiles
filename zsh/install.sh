@@ -63,16 +63,18 @@ fi
 
 # 2. Set up ZDOTDIR by creating ~/.zshenv
 print_step "Setting up ZDOTDIR..."
-if [ -f "$HOME/.zshenv" ]; then
-    # Backup existing .zshenv
-    cp "$HOME/.zshenv" "$HOME/.zshenv.backup.$(date +%Y%m%d_%H%M%S)"
-    print_warning "Backed up existing ~/.zshenv"
-fi
-
-# Copy the minimal home-zshenv to ~/.zshenv
 if [ -f "$SCRIPT_DIR/home-zshenv" ]; then
-    cp "$SCRIPT_DIR/home-zshenv" "$HOME/.zshenv"
-    print_info "Created ~/.zshenv (sets ZDOTDIR to $SCRIPT_DIR)"
+    if [ -f "$HOME/.zshenv" ] && cmp -s "$SCRIPT_DIR/home-zshenv" "$HOME/.zshenv"; then
+        print_warning "~/.zshenv is already up to date"
+    else
+        # Backup existing .zshenv if it exists and differs
+        if [ -f "$HOME/.zshenv" ]; then
+            cp "$HOME/.zshenv" "$HOME/.zshenv.backup.$(date +%Y%m%d_%H%M%S)"
+            print_warning "Backed up existing ~/.zshenv"
+        fi
+        cp "$SCRIPT_DIR/home-zshenv" "$HOME/.zshenv"
+        print_info "Created ~/.zshenv (sets ZDOTDIR to $SCRIPT_DIR)"
+    fi
 else
     print_error "home-zshenv template not found in $SCRIPT_DIR"
     exit 1
@@ -142,11 +144,21 @@ else
     print_info "zsh-completions installed"
 fi
 
-# 9. Install fzf (fuzzy finder)
+# 9. Install zsh-history-substring-search plugin
+print_step "Installing zsh-history-substring-search..."
+HISTORY_SEARCH_DIR="$ZSH_CUSTOM/plugins/zsh-history-substring-search"
+if [ -d "$HISTORY_SEARCH_DIR" ]; then
+    print_warning "zsh-history-substring-search already installed"
+else
+    git clone https://github.com/zsh-users/zsh-history-substring-search "$HISTORY_SEARCH_DIR"
+    print_info "zsh-history-substring-search installed"
+fi
+
+# 10. Install fzf (fuzzy finder)
 print_step "Installing fzf..."
 pkg_install fzf
 
-# 10. Install optional tools (fd, bat, tree)
+# 11. Install optional tools (fd, bat, tree)
 print_step "Installing optional tools (fd, bat, tree)..."
 pkg_install fd bat tree
 
@@ -165,17 +177,21 @@ if is_linux && command -v batcat &> /dev/null && ! command -v bat &> /dev/null; 
     print_info "Created symlink: bat -> batcat"
 fi
 
-# 11. Set zsh as default shell
+# 12. Set zsh as default shell
 print_step "Setting zsh as default shell..."
-if [ "$SHELL" = "$(which zsh)" ]; then
-    print_warning "zsh is already the default shell"
+# Check if current shell is any zsh (handles different paths like /bin/zsh vs homebrew zsh)
+if [[ "$SHELL" == *zsh ]]; then
+    print_warning "zsh is already the default shell ($SHELL)"
 else
-    chsh -s "$(which zsh)"
-    print_info "Default shell changed to zsh"
-    print_warning "You need to log out and log back in for the shell change to take effect"
+    if chsh -s "$(which zsh)" 2>/dev/null; then
+        print_info "Default shell changed to zsh"
+        print_warning "You need to log out and log back in for the shell change to take effect"
+    else
+        print_warning "Could not change default shell (may require password). Run manually: chsh -s $(which zsh)"
+    fi
 fi
 
-# 12. Summary
+# 13. Summary
 echo ""
 echo "======================================"
 print_info "Zsh setup complete!"
@@ -195,7 +211,8 @@ print_info "Installed components:"
 echo "  • Zsh: $(zsh --version)"
 echo "  • Oh My Zsh (XDG compliant)"
 echo "  • Powerlevel10k theme"
-echo "  • Plugins: zsh-autosuggestions, zsh-syntax-highlighting, zsh-completions, z, fzf"
+echo "  • Plugins: zsh-autosuggestions, zsh-syntax-highlighting, zsh-completions, zsh-history-substring-search"
+echo "  • OMZ plugins: git, z, fzf, sudo, extract, colored-man-pages, copypath, dirhistory, jsontools, aliases"
 echo "  • Tools: fzf, fd, bat, tree"
 echo ""
 print_info "Next steps:"
