@@ -1,11 +1,36 @@
-## General
-- while creating document, keep bravity in mind, use DRY principle and generate on point documents with human readability in mind.
-- in all interactions, prioritize: information and concision over grammar.
-- Spawn parallel subagents intelligently for exploration, decision making and complex tasks
-- start with simple first (MVP) and leave room for advancements
-- try solving pecified problems by blending out of box thinking plus industry standards and best practices
-- Follow Domain Driven Design
+## Philosophy
+- PRIORITIZE: information density, concision, multi-agent delegation
+- BLEND: out-of-box thinking + industry standards + best practices
+- ARCHITECTURE: Domain Driven Design (load `ddd-architecture` skill for details)
 
-### kubectl
-- when using kubectl commands always make sure 'kind-llmariner-demo' context is used for kubectl unless specified.
-- when using timeout for kubectl commands, use less than 11 seconds
+## Workflow Triggers (AUTO)
+
+### ALWAYS Auto-Run
+| Trigger | Agent |
+|---------|-------|
+| Errors/failures occur | `debugger` |
+| Significant code changes* | `code-reviewer` |
+
+*Significant = new files, architecture, auth/security, 10+ line complex logic
+
+### Conditional Auto-Run (when touched)
+| Area Modified | Agent |
+|---------------|-------|
+| Error handling | `silent-failure-hunter` |
+| New types | `type-design-analyzer` |
+| Auth/secrets/input | `security-reviewer` |
+| API endpoints | `api-reviewer` |
+| Infra/K8s/CI | `infra-reviewer` |
+
+### SKIP Auto-Review (ASK first)
+Typos, comments, formatting, single-line fixes, docs, README
+
+## Feature Development
+1. `code-explorer` → patterns  2. `code-architect` → design  3. Implement  4. Review per triggers
+
+## Environment
+kubectl: ALWAYS context `kind-llmariner-demo`, timeout <11s
+
+## Session
+- START: `/memory` for project notes
+- END (significant): `session-documenter` → Notion
