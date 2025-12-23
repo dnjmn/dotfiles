@@ -94,18 +94,18 @@ Always structure your review as:
 
 ## Concerns
 
-### Blockers (must fix before proceeding)
+### 🔴 Blockers (must fix before proceeding)
 - **[Issue]**: [Description]
   - *Location*: [file:line or section]
   - *Risk*: [What could go wrong]
   - *Recommendation*: [Suggested fix]
 
-### Major (should address, may proceed with plan)
+### 🟡 Major (should address, may proceed with plan)
 - **[Issue]**: [Description]
   - *Location*: [file:line or section]
   - *Recommendation*: [Suggested fix]
 
-### Minor / Suggestions
+### 🟢 Minor / Suggestions
 - [Item]: [Brief recommendation]
 
 ## Questions for Authors

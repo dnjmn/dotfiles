@@ -1,10 +1,10 @@
 ---
 name: session-documenter
 description: >
-  Expert technical writer that captures reusable insights and patterns from
-  development work. Use PROACTIVELY when discovering non-trivial solutions,
-  debugging patterns, or architectural insights.
-  MUST BE USED when learning something applicable to future work or when
+  Expert technical writer that captures reusable insights and patterns from 
+  development work. Use PROACTIVELY when discovering non-trivial solutions, 
+  debugging patterns, or architectural insights. 
+  MUST BE USED when learning something applicable to future work or when 
   explicitly requested.
 tools: Read, Write, Glob
 model: inherit
@@ -49,7 +49,7 @@ Capture reusable technical knowledge and patterns that transcend individual proj
 ## Output Structure
 
 ### Location
-```
+````
 ~/.claude-knowledge/
 ├── README.md                 # Index of knowledge areas
 ├── debugging/               # Debugging patterns & techniques
@@ -61,19 +61,19 @@ Capture reusable technical knowledge and patterns that transcend individual proj
 │   └── react-patterns.md
 ├── errors/                  # Common error solutions
 └── insights-[YYYY-MM].md    # Monthly digest of quick tips
-```
+````
 
 ### Content Format
 
 **Header** (always):
-```markdown
+````markdown
 ## [Insight Title]
 Date: YYYY-MM-DD
 Domain: [performance|debugging|architecture|security|tooling|...]
 Project: [project name where this applied]
 Reuse: [High|Medium|Low]
 Labels: [appropriate labels]
-```
+````
 
 **Body** (focus on the universal pattern):
 - **Pattern/Principle**: The generalizable insight
@@ -86,9 +86,9 @@ Labels: [appropriate labels]
 ### Example Entries
 
 #### Performance Insight
-```markdown
+````markdown
 ## Connection Pool Sizing for Cloud Environments
-Date: 2024-11-10
+Date: 2024-11-10  
 Domain: performance
 Projects: api-gateway, user-service
 Reuse: High
@@ -98,7 +98,7 @@ Labels: #cloud #Networking
 
 **Context Example**: Redis timeouts in AWS despite low resource usage.
 
-**Solution**:
+**Solution**: 
 ```python
 # Counter-intuitive: smaller pools perform better
 pool_size = min(10, expected_concurrency / 4)
@@ -107,17 +107,17 @@ pool_size = min(10, expected_concurrency / 4)
 
 **Key Learning**: Managed services (RDS, ElastiCache, etc.) handle connection multiplexing differently. Each connection has higher overhead due to proxy layers. Smaller pools with queuing outperform large pools with connection thrashing.
 
-**When to Apply**:
+**When to Apply**: 
 - Managed databases/caches in cloud
 - Containerized environments with memory constraints
 - Seeing connection timeouts before CPU/memory limits
-```
+````
 
 #### Debugging Pattern
-```markdown
+````markdown
 ## Binary Search for Flaky Test Root Cause
 Date: 2024-11-10
-Domain: debugging
+Domain: debugging  
 Projects: checkout-service
 Reuse: High
 
@@ -135,28 +135,28 @@ pytest $(cat xab)  # Second half
 
 **Key Learning**: Flaky tests usually come from test pollution (shared state, timing, order dependencies) not code bugs. Bisecting the test suite finds the polluting test faster than debugging the failure.
 
-**When to Apply**:
+**When to Apply**: 
 - Test passes alone, fails in suite
 - Random failures in CI but not locally
 - After adding new tests to existing suite
-```
+````
 
 ### Quick Tips Format (for insights-YYYY-MM.md)
-```markdown
+````markdown
 ### 2024-11 Insights
 
 **React Re-render Gotcha** [project: dashboard]
 - `key={index}` in lists breaks when reordering
 - Use stable IDs: `key={item.id || generateStableHash(item)}`
 
-**Docker Layer Caching** [project: build-pipeline]
+**Docker Layer Caching** [project: build-pipeline]  
 - Put frequently changing files last in Dockerfile
 - `COPY package*.json` before `COPY .` saves 5min/build
 
 **TypeScript Inference** [project: component-lib]
 - `as const` on objects preserves literal types through functions
 - Eliminates 90% of explicit type annotations
-```
+````
 
 ## Quality Filters
 Before documenting, ask:
@@ -166,11 +166,11 @@ Before documenting, ask:
 - Will this still be valuable in 6 months?
 
 ## Anti-Patterns
-- Project-specific configuration values
-- Business logic documentation
-- Copy-pasting error messages without understanding
-- "Fixed X by doing Y" without explaining why
-- Documentation that's tied to specific file paths
+❌ Project-specific configuration values
+❌ Business logic documentation
+❌ Copy-pasting error messages without understanding
+❌ "Fixed X by doing Y" without explaining why
+❌ Documentation that's tied to specific file paths
 
 ## Cross-Referencing
 When an insight applies to multiple domains:

@@ -2,7 +2,21 @@
 
 # Claude Code Configuration Setup
 # Symlinks Claude configs from dotfiles to ~/.claude/
-# Date: 2025-11-27
+#
+# Version Controlled:
+#   - CLAUDE.md      → User instructions/memory
+#   - settings.json  → User settings
+#   - agents/        → Custom subagents
+#   - commands/      → Custom slash commands
+#   - skills/        → Custom skills
+#   - rules/         → Path-scoped rules
+#   - hooks/         → Hook scripts
+#
+# NOT Version Controlled (in ~/.claude/):
+#   - .credentials.json, history.jsonl, projects/, debug/, etc.
+#   - MCP servers (stored in ~/.claude.json, use ./mcp-install.sh)
+#
+# For MCP servers: run ./mcp-install.sh after this script
 
 set -euo pipefail
 
@@ -11,7 +25,6 @@ echo "Claude Code Setup"
 echo "======================================"
 echo ""
 
-# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -20,7 +33,7 @@ NC='\033[0m'
 
 print_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
 print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
-print_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
+print_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 print_step() { echo -e "${BLUE}[STEP]${NC} $1"; }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -33,25 +46,25 @@ echo ""
 # Check Claude Code installation
 print_step "Checking Claude Code..."
 if command -v claude &>/dev/null; then
-    print_info "Claude Code installed"
+    print_info "Claude Code installed: $(claude --version 2>/dev/null || echo 'version unknown')"
 else
-    print_warning "Claude Code not found - install from: https://claude.ai/download"
+    print_warn "Claude Code not found - install from: https://claude.ai/download"
 fi
 
 # Create ~/.claude if needed
 mkdir -p "$CLAUDE_HOME"
 
-# Backup helper
+# Backup existing files/dirs that aren't symlinks
 backup_if_needed() {
     local target="$1"
     if [ -e "$target" ] && [ ! -L "$target" ]; then
         local backup="$target.backup.$(date +%Y%m%d_%H%M%S)"
         mv "$target" "$backup"
-        print_warning "Backed up: $target → $backup"
+        print_warn "Backed up: $target → $backup"
     fi
 }
 
-# Symlink file
+# Symlink a file
 link_file() {
     local src="$1"
     local dest="$2"
@@ -61,28 +74,31 @@ link_file() {
     print_info "Linked: $(basename "$dest")"
 }
 
-# Symlink directory (entire directory as symlink)
+# Symlink a directory
 link_dir() {
     local src="$1"
     local dest="$2"
-    # Only link if source dir exists and has content
-    [ -d "$src" ] && [ "$(ls -A "$src" 2>/dev/null)" ] || return 0
+    # Only link if source dir exists
+    [ -d "$src" ] || return 0
     backup_if_needed "$dest"
-    rm -rf "$dest" 2>/dev/null || true
+    rm -f "$dest" 2>/dev/null || true  # Remove existing symlink
     ln -sf "$src" "$dest"
     print_info "Linked: $(basename "$dest")/"
 }
 
-# Link configs
+# Link configurations
 print_step "Linking configurations..."
 
+# Core config files
 link_file "$SCRIPT_DIR/CLAUDE.md" "$CLAUDE_HOME/CLAUDE.md"
 link_file "$SCRIPT_DIR/settings.json" "$CLAUDE_HOME/settings.json"
-link_file "$SCRIPT_DIR/mcp.json" "$HOME/.mcp.json"
+
+# Directories
 link_dir "$SCRIPT_DIR/agents" "$CLAUDE_HOME/agents"
 link_dir "$SCRIPT_DIR/commands" "$CLAUDE_HOME/commands"
 link_dir "$SCRIPT_DIR/skills" "$CLAUDE_HOME/skills"
-link_dir "$SCRIPT_DIR/output-styles" "$CLAUDE_HOME/output-styles"
+link_dir "$SCRIPT_DIR/rules" "$CLAUDE_HOME/rules"
+link_dir "$SCRIPT_DIR/hooks" "$CLAUDE_HOME/hooks"
 
 # Summary
 echo ""
@@ -90,12 +106,13 @@ echo "======================================"
 print_info "Claude Code setup complete!"
 echo "======================================"
 echo ""
-print_info "Linked:"
-[ -L "$CLAUDE_HOME/CLAUDE.md" ] && echo "  - CLAUDE.md"
-[ -L "$CLAUDE_HOME/settings.json" ] && echo "  - settings.json"
-[ -L "$HOME/.mcp.json" ] && echo "  - ~/.mcp.json (MCP servers)"
-[ -L "$CLAUDE_HOME/agents" ] && echo "  - agents/"
-[ -L "$CLAUDE_HOME/commands" ] && echo "  - commands/"
-[ -L "$CLAUDE_HOME/skills" ] && echo "  - skills/"
-[ -L "$CLAUDE_HOME/output-styles" ] && echo "  - output-styles/"
+echo "Linked configs:"
+[ -L "$CLAUDE_HOME/CLAUDE.md" ] && echo "  - CLAUDE.md (user instructions)"
+[ -L "$CLAUDE_HOME/settings.json" ] && echo "  - settings.json (user settings)"
+[ -L "$CLAUDE_HOME/agents" ] && echo "  - agents/ (custom subagents)"
+[ -L "$CLAUDE_HOME/commands" ] && echo "  - commands/ (slash commands)"
+[ -L "$CLAUDE_HOME/skills" ] && echo "  - skills/ (custom skills)"
+[ -L "$CLAUDE_HOME/rules" ] && echo "  - rules/ (path-scoped rules)"
+[ -L "$CLAUDE_HOME/hooks" ] && echo "  - hooks/ (hook scripts)"
 echo ""
+print_info "For MCP servers, run: ./mcp-install.sh"

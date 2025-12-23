@@ -105,7 +105,7 @@ trivy image <image> 2>/dev/null || echo "trivy not installed"
    # Common secret patterns
    grep -rn --include="*.go" --include="*.py" --include="*.yaml" --include="*.json" \
      -E "(password|secret|api_key|apikey|token|credential|private_key)\s*[:=]" . 2>/dev/null | head -20
-
+   
    # Hardcoded strings that look like secrets
    grep -rn -E "['\"][A-Za-z0-9+/]{32,}['\"]" . 2>/dev/null | grep -v vendor | head -20
    ```
@@ -114,7 +114,7 @@ trivy image <image> 2>/dev/null || echo "trivy not installed"
    ```bash
    # SQL injection (string concatenation in queries)
    grep -rn --include="*.go" --include="*.py" -E "(SELECT|INSERT|UPDATE|DELETE).*\+" . 2>/dev/null | head -20
-
+   
    # Command injection
    grep -rn --include="*.go" "exec\.Command" . 2>/dev/null | head -20
    grep -rn --include="*.py" -E "(os\.system|subprocess|eval|exec)\(" . 2>/dev/null | head -20
@@ -124,7 +124,7 @@ trivy image <image> 2>/dev/null || echo "trivy not installed"
    ```bash
    # Weak algorithms
    grep -rn -E "(md5|sha1|DES|RC4)" . 2>/dev/null | grep -v vendor | head -20
-
+   
    # Hardcoded IVs or keys
    grep -rn --include="*.go" --include="*.py" -E "(iv|IV|nonce)\s*[:=]\s*\[" . 2>/dev/null | head -20
    ```
@@ -181,7 +181,7 @@ trivy image <image> 2>/dev/null || echo "trivy not installed"
 
 ## Findings
 
-### Critical (immediate action required)
+### 🔴 Critical (immediate action required)
 - **[VULN-001] [Vulnerability Type]**
   - *Location*: `path/to/file.go:42`
   - *Description*: [What's wrong]
@@ -190,25 +190,25 @@ trivy image <image> 2>/dev/null || echo "trivy not installed"
   - *CVSS Estimate*: [score] ([vector])
   - *Fix*: [Specific remediation with code example if helpful]
 
-### High
+### 🟠 High
 - **[VULN-002] [Vulnerability Type]**
   - *Location*: `path/to/file.py:15`
   - *Description*: [What's wrong]
   - *Impact*: [Risk]
   - *Fix*: [Remediation]
 
-### Medium
+### 🟡 Medium
 - **[VULN-003] [Issue]**: [Description]
   - *Location*: [file:line]
   - *Fix*: [Remediation]
 
-### Low / Informational
+### 🟢 Low / Informational
 - [file:line]: [Minor issue or hardening suggestion]
 
 ## Secrets Scan
 | Status | Details |
 |--------|---------|
-| Found/Clear | [Secrets found / No secrets detected] |
+| 🔴 / ✅ | [Secrets found / No secrets detected] |
 
 **Findings:**
 - [List any detected secrets with redacted samples]
@@ -221,12 +221,12 @@ trivy image <image> 2>/dev/null || echo "trivy not installed"
 ## Security Checklist
 | Category | Status | Notes |
 |----------|--------|-------|
-| Secrets Management | Pass/Warn/Fail | [Summary] |
-| Authentication | Pass/Warn/Fail | [Summary] |
-| Authorization | Pass/Warn/Fail | [Summary] |
-| Input Validation | Pass/Warn/Fail | [Summary] |
-| Crypto | Pass/Warn/Fail | [Summary] |
-| Dependencies | Pass/Warn/Fail | [Summary] |
+| Secrets Management | ✅/⚠️/🔴 | [Summary] |
+| Authentication | ✅/⚠️/🔴 | [Summary] |
+| Authorization | ✅/⚠️/🔴 | [Summary] |
+| Input Validation | ✅/⚠️/🔴 | [Summary] |
+| Crypto | ✅/⚠️/🔴 | [Summary] |
+| Dependencies | ✅/⚠️/🔴 | [Summary] |
 
 ## Recommendations
 1. [Prioritized action item]

@@ -1,0 +1,25 @@
+# Claude Code - Files NOT to version control
+# These are generated/sensitive and should stay in ~/.claude/ only
+
+# Credentials & sessions
+.credentials.json
+
+# History & caches
+history.jsonl
+stats-cache.json
+statsig/
+debug/
+file-history/
+todos/
+shell-snapshots/
+session-env/
+
+# Project-specific data
+projects/
+local/
+
+# IDE integration state
+ide/
+
+# Plugins state (managed by Claude Code)
+plugins/

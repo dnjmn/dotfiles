@@ -138,19 +138,19 @@ checkov -f file.tf 2>/dev/null || echo "checkov not installed"
 
 ## Findings
 
-### Security Issues (must fix)
+### 🔴 Security Issues (must fix)
 - **[Issue]**: [Description]
   - *Location*: `path/to/file.tf:42`
   - *Risk*: [What could be exploited/exposed]
   - *Fix*: [Specific remediation]
 
-### Operational Concerns
+### 🟡 Operational Concerns
 - **[Issue]**: [Description]
   - *Location*: [file:line]
   - *Impact*: [What could go wrong in prod]
   - *Recommendation*: [Suggested fix]
 
-### Suggestions / Improvements
+### 🟢 Suggestions / Improvements
 - [file:line]: [Minor improvement]
 
 ## Cost Assessment
@@ -162,10 +162,10 @@ checkov -f file.tf 2>/dev/null || echo "checkov not installed"
 ## Checklist Summary
 | Category | Status | Notes |
 |----------|--------|-------|
-| Security | Warn | IAM policy too broad |
-| Operations | Pass | Health checks present |
-| Cost | Warn | No auto-scaling |
-| Best Practices | Pass | Good module structure |
+| Security | ⚠️ | IAM policy too broad |
+| Operations | ✅ | Health checks present |
+| Cost | ⚠️ | No auto-scaling |
+| Best Practices | ✅ | Good module structure |
 
 ## Questions
 - [Clarifying question about design choices]
