@@ -1,36 +1,68 @@
-## Philosophy
-- PRIORITIZE: information density, concision, multi-agent delegation
-- BLEND: out-of-box thinking + industry standards + best practices
-- ARCHITECTURE: Domain Driven Design (load `ddd-architecture` skill for details)
+# CLAUDE.md
 
-## Workflow Triggers (AUTO)
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-### ALWAYS Auto-Run
-| Trigger | Agent |
-|---------|-------|
-| Errors/failures occur | `debugger` |
-| Significant code changes* | `code-reviewer` |
+## Overview
 
-*Significant = new files, architecture, auth/security, 10+ line complex logic
+Claude Code global configuration directory. Symlinked to `~/.claude/` via `install.sh`.
 
-### Conditional Auto-Run (when touched)
-| Area Modified | Agent |
-|---------------|-------|
-| Error handling | `silent-failure-hunter` |
-| New types | `type-design-analyzer` |
-| Auth/secrets/input | `security-reviewer` |
-| API endpoints | `api-reviewer` |
-| Infra/K8s/CI | `infra-reviewer` |
+## Installation
 
-### SKIP Auto-Review (ASK first)
-Typos, comments, formatting, single-line fixes, docs, README
+```bash
+./install.sh    # Symlinks ~/.claude → config/
+```
 
-## Feature Development
-1. `code-explorer` → patterns  2. `code-architect` → design  3. Implement  4. Review per triggers
+## Directory Structure
 
-## Environment
-kubectl: ALWAYS context `kind-llmariner-demo`, timeout <11s
+`config/` becomes `~/.claude/` via symlink:
 
-## Session
-- START: `/memory` for project notes
-- END (significant): `session-documenter` → Notion
+```
+claude/
+├── install.sh                # Installation script
+└── config/ → ~/.claude/
+    ├── .gitignore            # Ignores runtime files
+    ├── CLAUDE.md             # Global instructions
+    ├── settings.json         # Enabled plugins
+    ├── statusline.sh         # P10k-style status line
+    └── plugins/
+        └── local/
+            ├── backstage-dev/      # Backstage development workflows
+            └── dnjmn-workflows/    # Personal workflow skills
+                ├── plugin.json
+                ├── commands/
+                │   └── orchestrate.md
+                └── skills/
+```
+
+## Key Components
+
+### config/statusline.sh
+
+P10k-style status line showing: directory (blue), git branch (yellow), model (cyan), context % (grey).
+
+### config/CLAUDE.md
+
+Global instructions loaded every session. Contains multi-agent orchestration triggers, auto-review rules, command references.
+
+### Local Plugins
+
+| Plugin | Purpose |
+|--------|---------|
+| `dnjmn-workflows` | `/orchestrate` command, DDD architecture, plugin patterns |
+| `backstage-dev` | Backstage developer portal workflows |
+
+## Enabled Plugins
+
+From `config/settings.json`:
+- commit-commands, feature-dev, code-review, pr-review-toolkit
+- frontend-design, ralph-wiggum, hookify
+- greptile, playwright, Notion, context7
+- gopls-lsp, typescript-lsp
+
+## Editing
+
+All edits in `config/` are live immediately (symlinked to `~/.claude/`):
+
+- **Global instructions**: `config/CLAUDE.md`
+- **Plugin toggles**: `config/settings.json`
+- **Custom plugins**: `config/plugins/local/<plugin-name>/`

@@ -61,6 +61,7 @@ fi
 # 2. Link tmux configuration
 print_step "Setting up tmux configuration..."
 symlink_with_backup "$SCRIPT_DIR/tmux.conf" "$TMUX_CONFIG_DIR/tmux.conf"
+symlink_with_backup "$SCRIPT_DIR/statusline.conf" "$TMUX_CONFIG_DIR/statusline.conf"
 
 # 3. Install TPM (Tmux Plugin Manager)
 print_step "Installing TPM (Tmux Plugin Manager)..."

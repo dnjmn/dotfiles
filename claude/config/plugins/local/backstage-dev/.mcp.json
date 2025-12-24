@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "backstage-catalog": {
+      "command": "npx",
+      "args": ["tsx", "${CLAUDE_PLUGIN_ROOT}/mcp/backstage-catalog-server.ts"],
+      "env": {
+        "BACKSTAGE_URL": "http://localhost:7007",
+        "LOG_LEVEL": "info"
+      }
+    }
+  }
+}

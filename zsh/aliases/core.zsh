@@ -24,3 +24,6 @@ alias dev="cd ~/Developer"
 alias repos="cd ~/Developer/repos"
 alias dotfiles="cd ~/Developer/repos/dnjmn/dotfiles"
 
+# === TMUX ===
+alias tm="tmux new-session -A -s main"
+
