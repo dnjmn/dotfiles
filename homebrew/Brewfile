@@ -16,6 +16,10 @@ brew "curl"          # HTTP client
 brew "jq"            # JSON processor
 brew "unzip"         # Archive extraction
 
+# === Kubernetes ===
+tap "derailed/k9s"
+brew "derailed/k9s/k9s"  # Kubernetes TUI
+
 # === GUI Applications (macOS only) ===
 cask "kitty"         # Terminal emulator
 cask "obsidian"      # Notes
