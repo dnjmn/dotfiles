@@ -1,1 +1,10 @@
 neovim/lazy-lock.json
+
+# macOS
+.DS_Store
+
+# Claude Code
+**/stats-cache.json
+
+# External reference docs (not tracked)
+claude/config/plugins/local/backstage-dev/docs/
