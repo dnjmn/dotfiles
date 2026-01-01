@@ -2,7 +2,7 @@
 name: template-validator
 description: Validates and debugs Backstage Software Templates. Use this agent when templates fail to execute, have syntax errors, or need thorough validation before publishing.
 tools: Glob, Grep, Read, Bash
-model: sonnet
+model: inherit
 ---
 
 # Template Validator

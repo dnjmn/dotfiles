@@ -2,7 +2,7 @@
 name: catalog-analyzer
 description: Analyzes Backstage catalog entity relationships, dependencies, and ownership structure. Use this agent when understanding system architecture, debugging entity issues, or planning catalog organization.
 tools: Glob, Grep, Read
-model: sonnet
+model: inherit
 ---
 
 # Catalog Analyzer

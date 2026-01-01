@@ -101,7 +101,7 @@ backstage-dev/
 │   ├── backstage-debug.md
 │   ├── backstage-build.md
 │   └── entity-page.md
-├── agents/                    # Subagents
+├── agents/                    # Agents
 │   ├── backstage-plugin-reviewer.md
 │   ├── template-validator.md
 │   ├── catalog-analyzer.md

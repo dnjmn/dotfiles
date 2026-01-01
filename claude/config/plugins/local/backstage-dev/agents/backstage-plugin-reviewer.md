@@ -2,7 +2,7 @@
 name: backstage-plugin-reviewer
 description: Reviews Backstage plugin code for architecture patterns, best practices, and common issues. Use this agent proactively after making changes to plugins/, packages/app, or packages/backend code.
 tools: Glob, Grep, Read, Bash
-model: sonnet
+model: inherit
 ---
 
 # Backstage Plugin Reviewer

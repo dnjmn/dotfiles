@@ -2,7 +2,7 @@
 name: config-auditor
 description: Audits Backstage configuration files for security issues, completeness, and best practices. Use this agent before deployment or when debugging configuration problems.
 tools: Glob, Grep, Read
-model: sonnet
+model: inherit
 ---
 
 # Configuration Auditor
