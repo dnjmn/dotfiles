@@ -2,60 +2,75 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Overview
+## Repository Overview
 
-Cross-platform dotfiles for macOS and Linux. User-level installation (no sudo). XDG Base Directory compliant.
+Cross-platform dotfiles for macOS and Linux. All software installs at user-level (no sudo). Follows XDG Base Directory specification.
 
 ## Commands
 
 ```bash
-# Full installation
+# Full setup
 ./install.sh --all
 
-# Individual tools (or interactive: ./install.sh)
-./install.sh --zsh
-./install.sh --kitty
-./install.sh --tmux
-./install.sh --neovim
-./install.sh --claude
-./install.sh --go
-./install.sh --docker
-./install.sh --obsidian
+# Individual tools
+./install.sh --zsh|--kitty|--tmux|--neovim|--claude|--docker|--go
 
-# Direct module install
-cd zsh && ./install.sh
+# Interactive mode
+./install.sh
+
+# Homebrew packages
+brew bundle --file=homebrew/Brewfile
 ```
 
 ## Architecture
 
-Each `{tool}/` directory contains an `install.sh` that sources `lib/platform.sh` for cross-platform helpers.
+### Directory Structure
 
-**Install script pattern:**
+```
+├── install.sh              # Master installer - orchestrates all tool installs
+├── lib/platform.sh         # Shared utilities: OS detection, pkg management, symlinks
+├── homebrew/Brewfile       # All brew packages
+├── zsh/                    # Shell config (XDG compliant)
+│   ├── .zshrc/.zshenv      # Main configs
+│   ├── aliases/            # Command aliases by category
+│   ├── functions/          # Shell functions
+│   └── config/             # Modular configs (exports, completions, etc.)
+├── tmux/                   # tmux.conf + plugins
+├── kitty/                  # kitty.conf + theme
+├── neovim/                 # LazyVim config
+├── claude/                 # Claude Code config
+│   ├── config/             # Symlinked to ~/.claude/
+│   │   ├── CLAUDE.md       # Global Claude instructions
+│   │   ├── settings.json   # Plugin toggles
+│   │   └── plugins/local/  # Custom plugins (backstage-dev, dnjmn-workflows)
+│   └── install.sh          # Creates ~/.claude symlink
+└── docs/                   # Setup guides per tool
+```
+
+### Key Patterns
+
+**lib/platform.sh** - Source in any install script for:
+- `detect_os()`, `is_macos()`, `is_linux()`
+- `pkg_install()`, `pkg_install_cask()` - Homebrew wrappers
+- `symlink_with_backup()` - Safe symlinking with backup
+- `get_github_release_url()` - Fetch latest release URLs
+
+**Install scripts** follow pattern:
 1. Source `lib/platform.sh`
-2. `ensure_homebrew` → `pkg_install <package>` → `symlink_with_backup`
+2. Check/install dependencies via Homebrew
+3. Symlink configs to XDG locations
+4. Print post-install steps
 
-**Platform helpers** (`lib/platform.sh`):
-- Detection: `is_macos`, `is_linux`, `is_arm64`
-- Packages: `pkg_install`, `pkg_install_cask` (Homebrew wrappers)
-- Files: `symlink_with_backup`, `download_verified`
+**XDG paths used:**
+- `~/.config/` - configs (zsh, tmux, nvim, kitty)
+- `~/.local/share/` - data, fonts
+- `~/.local/bin/` - user binaries
+- `~/.cache/` - cache files
 
-**Zsh modular loading** (`zsh/.zshrc`):
-- Loads `$ZDOTDIR/{config,aliases,functions}/*.zsh` in order
-- Local overrides in `$ZDOTDIR/local.zsh` (gitignored)
+## When Editing
 
-## XDG Paths
-
-| Tool | Config Location |
-|------|-----------------|
-| Zsh | ZDOTDIR=`dotfiles/zsh/`, secrets in `~/.config/zsh/env.zsh` |
-| Tmux | `~/.config/tmux/tmux.conf` |
-| Neovim | `~/.config/nvim/` |
-| Kitty | `~/.config/kitty/kitty.conf` |
-| Go | `GOPATH=~/.local/share/go`, `GOBIN=~/.local/bin` |
-
-## Tool Defaults
-
-- **Tmux prefix**: `Ctrl+a` — install plugins with `Prefix + I` (Ctrl+a then Shift+i)
-- **Kitty**: Auto-starts tmux session on launch
-- **Neovim**: LazyVim distribution
-- **Theme**: Gruvbox Dark
+- Test changes on macOS (primary) - Linux paths differ for casks
+- `lib/platform.sh` changes affect all install scripts
+- Claude configs in `claude/config/` are live (symlinked to `~/.claude/`)
+- Zsh changes: run `exec zsh` to reload
+- Tmux changes: `prefix + r` to reload (prefix = Ctrl+a)
