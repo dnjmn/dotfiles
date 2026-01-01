@@ -36,12 +36,6 @@ export NODE_REPL_HISTORY="$XDG_STATE_HOME/node/repl_history"
 # Python
 export PYTHONSTARTUP="$XDG_CONFIG_HOME/python/pythonrc"
 
-# Docker
-export DOCKER_CONFIG="$XDG_CONFIG_HOME/docker"
-
-# Kubernetes
-export KUBECONFIG="$XDG_CONFIG_HOME/kube/config.yaml"
-
 # AWS
 export AWS_SHARED_CREDENTIALS_FILE="$XDG_CONFIG_HOME/aws/credentials"
 export AWS_CONFIG_FILE="$XDG_CONFIG_HOME/aws/config"

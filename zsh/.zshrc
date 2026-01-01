@@ -29,4 +29,5 @@ for f in "$ZSH_CONFIG_DIR"/functions/*.zsh(N); do _source_config "$f"; done
 
 # If you come from bash you might have to change your $PATH.
 export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH
+export PATH=$HOME/.docker/cli-plugins:$PATH
 
