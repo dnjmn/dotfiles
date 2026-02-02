@@ -24,6 +24,7 @@ brew "derailed/k9s/k9s"  # Kubernetes TUI
 cask "kitty"         # Terminal emulator
 cask "obsidian"      # Notes
 cask "notion"        # Productivity
+cask "ticktick"      # Task management
 
 # === Fonts ===
 cask "font-hack-nerd-font"

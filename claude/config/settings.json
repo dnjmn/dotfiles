@@ -1,19 +1,25 @@
 {
+  "model": "opus",
   "enabledPlugins": {
-    "context7@claude-plugins-official": false,
+    "context7@claude-plugins-official": true,
     "frontend-design@claude-plugins-official": true,
     "feature-dev@claude-plugins-official": true,
-    "code-review@claude-plugins-official": false,
-    "commit-commands@claude-plugins-official": false,
+    "code-review@claude-plugins-official": true,
+    "commit-commands@claude-plugins-official": true,
     "pr-review-toolkit@claude-plugins-official": false,
     "ralph-wiggum@claude-plugins-official": false,
     "hookify@claude-plugins-official": false,
-    "greptile@claude-plugins-official": false,
-    "gopls-lsp@claude-plugins-official": false,
+    "gopls-lsp@claude-plugins-official": true,
     "typescript-lsp@claude-plugins-official": false,
     "playwright@claude-plugins-official": true,
     "atlassian@claude-plugins-official": false,
     "mcp-toolkit@docker": false,
-    "figma@claude-plugins-official": true
+    "figma@claude-plugins-official": false,
+    "code-simplifier@claude-plugins-official": true,
+    "superpowers@claude-plugins-official": true,
+    "claude-code-setup@claude-plugins-official": true,
+    "claude-md-management@claude-plugins-official": true,
+    "Notion@claude-plugins-official": true,
+    "plugin-dev@claude-plugins-official": true
   }
 }

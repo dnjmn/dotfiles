@@ -81,6 +81,7 @@ export PATH="$HOME/.local/bin:$PATH"
 
 # ===== LOAD SECRET ENVIRONMENT VARIABLES =====
 # Source secret env vars from XDG config (not version controlled)
-if [[ -f "$XDG_CONFIG_HOME/zsh/env.zsh" ]]; then
-  source "$XDG_CONFIG_HOME/zsh/env.zsh"
+export SECRETS=$XDG_CONFIG_HOME/zsh/env.zsh
+if [[ -f "$SECRETS" ]]; then
+  source "$SECRETS"
 fi

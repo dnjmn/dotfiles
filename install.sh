@@ -73,7 +73,8 @@ echo "  5. Neovim (LazyVim configuration)"
 echo "  6. Claude Code (AI assistant configuration)"
 echo "  7. Docker (Container runtime)"
 echo "  8. Go (Golang toolchain and dev tools)"
-echo "  9. All of the above"
+echo "  9. Ollama (LLM inference engine in Docker)"
+echo "  10. All of the above"
 echo ""
 
 # Initialize variables
@@ -99,6 +100,7 @@ elif [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     echo "  --claude          Install only Claude Code configs"
     echo "  --docker          Install only Docker"
     echo "  --go, --golang    Install only Go"
+    echo "  --ollama          Install only Ollama"
     echo ""
     echo "Examples:"
     echo "  ./install.sh              # Interactive mode"
@@ -118,6 +120,7 @@ elif [ "$1" = "--homebrew" ]; then
     INSTALL_CLAUDE=false
     INSTALL_DOCKER=false
     INSTALL_GO=false
+    INSTALL_OLLAMA=false
     INTERACTIVE=false
 elif [ "$1" = "--zsh" ]; then
     INSTALL_HOMEBREW=false
@@ -129,6 +132,7 @@ elif [ "$1" = "--zsh" ]; then
     INSTALL_CLAUDE=false
     INSTALL_DOCKER=false
     INSTALL_GO=false
+    INSTALL_OLLAMA=false
     INTERACTIVE=false
 elif [ "$1" = "--kitty" ]; then
     INSTALL_HOMEBREW=false
@@ -140,6 +144,7 @@ elif [ "$1" = "--kitty" ]; then
     INSTALL_CLAUDE=false
     INSTALL_DOCKER=false
     INSTALL_GO=false
+    INSTALL_OLLAMA=false
     INTERACTIVE=false
 elif [ "$1" = "--tmux" ]; then
     INSTALL_HOMEBREW=false
@@ -151,6 +156,7 @@ elif [ "$1" = "--tmux" ]; then
     INSTALL_CLAUDE=false
     INSTALL_DOCKER=false
     INSTALL_GO=false
+    INSTALL_OLLAMA=false
     INTERACTIVE=false
 elif [ "$1" = "--obsidian" ]; then
     INSTALL_HOMEBREW=false
@@ -162,6 +168,7 @@ elif [ "$1" = "--obsidian" ]; then
     INSTALL_CLAUDE=false
     INSTALL_DOCKER=false
     INSTALL_GO=false
+    INSTALL_OLLAMA=false
     INTERACTIVE=false
 elif [ "$1" = "--neovim" ]; then
     INSTALL_HOMEBREW=false
@@ -173,6 +180,7 @@ elif [ "$1" = "--neovim" ]; then
     INSTALL_CLAUDE=false
     INSTALL_DOCKER=false
     INSTALL_GO=false
+    INSTALL_OLLAMA=false
     INTERACTIVE=false
 elif [ "$1" = "--claude" ]; then
     INSTALL_HOMEBREW=false
@@ -184,6 +192,7 @@ elif [ "$1" = "--claude" ]; then
     INSTALL_CLAUDE=true
     INSTALL_DOCKER=false
     INSTALL_GO=false
+    INSTALL_OLLAMA=false
     INTERACTIVE=false
 elif [ "$1" = "--docker" ]; then
     INSTALL_HOMEBREW=false
@@ -195,6 +204,7 @@ elif [ "$1" = "--docker" ]; then
     INSTALL_CLAUDE=false
     INSTALL_DOCKER=true
     INSTALL_GO=false
+    INSTALL_OLLAMA=false
     INTERACTIVE=false
 elif [ "$1" = "--go" ] || [ "$1" = "--golang" ]; then
     INSTALL_HOMEBREW=false
@@ -206,6 +216,19 @@ elif [ "$1" = "--go" ] || [ "$1" = "--golang" ]; then
     INSTALL_CLAUDE=false
     INSTALL_DOCKER=false
     INSTALL_GO=true
+    INSTALL_OLLAMA=false
+    INTERACTIVE=false
+elif [ "$1" = "--ollama" ]; then
+    INSTALL_HOMEBREW=false
+    INSTALL_ZSH=false
+    INSTALL_KITTY=false
+    INSTALL_TMUX=false
+    INSTALL_OBSIDIAN=false
+    INSTALL_NEOVIM=false
+    INSTALL_CLAUDE=false
+    INSTALL_DOCKER=false
+    INSTALL_GO=false
+    INSTALL_OLLAMA=true
     INTERACTIVE=false
 else
     INTERACTIVE=true
@@ -315,6 +338,17 @@ if [ "$INTERACTIVE" = true ]; then
         esac
     done
 
+    # Ollama
+    while true; do
+        read -p "Install Ollama (Docker)? (y/n): " -n 1 -r
+        echo
+        case $REPLY in
+            [Yy]* ) INSTALL_OLLAMA=true; break;;
+            [Nn]* ) INSTALL_OLLAMA=false; break;;
+            * ) echo "Please answer y or n.";;
+        esac
+    done
+
     # Confirm
     echo ""
     print_info "Installation Summary:"
@@ -327,6 +361,7 @@ if [ "$INTERACTIVE" = true ]; then
     [ "$INSTALL_CLAUDE" = true ] && echo "  ✓ Claude Code"
     [ "$INSTALL_DOCKER" = true ] && echo "  ✓ Docker"
     [ "$INSTALL_GO" = true ] && echo "  ✓ Go"
+    [ "$INSTALL_OLLAMA" = true ] && echo "  ✓ Ollama"
     echo ""
 
     while true; do
@@ -348,10 +383,11 @@ elif [ "$INSTALL_ALL" = true ]; then
     INSTALL_CLAUDE=true
     INSTALL_DOCKER=true
     INSTALL_GO=true
+    INSTALL_OLLAMA=true
 fi
 
 # Check if anything is selected
-if [ "$INSTALL_HOMEBREW" != true ] && [ "$INSTALL_ZSH" != true ] && [ "$INSTALL_KITTY" != true ] && [ "$INSTALL_TMUX" != true ] && [ "$INSTALL_OBSIDIAN" != true ] && [ "$INSTALL_NEOVIM" != true ] && [ "$INSTALL_CLAUDE" != true ] && [ "$INSTALL_DOCKER" != true ] && [ "$INSTALL_GO" != true ]; then
+if [ "$INSTALL_HOMEBREW" != true ] && [ "$INSTALL_ZSH" != true ] && [ "$INSTALL_KITTY" != true ] && [ "$INSTALL_TMUX" != true ] && [ "$INSTALL_OBSIDIAN" != true ] && [ "$INSTALL_NEOVIM" != true ] && [ "$INSTALL_CLAUDE" != true ] && [ "$INSTALL_DOCKER" != true ] && [ "$INSTALL_GO" != true ] && [ "$INSTALL_OLLAMA" != true ]; then
     print_warning "Nothing selected to install. Exiting."
     exit 0
 fi
@@ -533,6 +569,24 @@ if [ "$INSTALL_GO" = true ]; then
     fi
 fi
 
+# Install Ollama
+if [ "$INSTALL_OLLAMA" = true ]; then
+    print_header "Installing Ollama"
+
+    if [ -f "$SCRIPT_DIR/ollama/install.sh" ]; then
+        if bash "$SCRIPT_DIR/ollama/install.sh"; then
+            INSTALLATIONS_SUCCEEDED+=("Ollama")
+            print_success "Ollama installation completed"
+        else
+            INSTALLATIONS_FAILED+=("Ollama")
+            print_error "Ollama installation failed"
+        fi
+    else
+        print_error "Ollama installation script not found at $SCRIPT_DIR/ollama/install.sh"
+        INSTALLATIONS_FAILED+=("Ollama")
+    fi
+fi
+
 # Summary
 print_header "Installation Summary"
 
@@ -634,6 +688,16 @@ if [ "$INSTALL_GO" = true ]; then
     echo "  2. Verify: go version"
     echo "  3. Create project: mkdir -p ~/go/src/myproject && cd \$_ && go mod init"
     echo "  4. Useful aliases: gotest, gobuild, golint"
+    echo ""
+fi
+
+if [ "$INSTALL_OLLAMA" = true ]; then
+    echo -e "${BOLD}Ollama:${NC}"
+    echo "  1. Container is running at http://localhost:11434"
+    echo "  2. Pull a model: docker exec ollama ollama pull mistral"
+    echo "  3. Chat: docker exec -it ollama ollama run mistral"
+    echo "  4. View logs: docker-compose -f $SCRIPT_DIR/ollama/docker-compose.yml logs -f"
+    echo "  5. Models stored in: ${XDG_DATA_HOME:-$HOME/.local/share}/ollama/models"
     echo ""
 fi
 
