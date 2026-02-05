@@ -46,18 +46,6 @@ Each layer builds on the one below. The dotfiles repo is the foundation for incr
 
 **Single-Sentence Answer:** This project exists because the highest-leverage investment is encoding expertise into reusable systems—starting with shell config, culminating in AI agents that think like me while building a Backstage portal.
 
-### Evidence
-
-| Signal | What It Reveals |
-|--------|-----------------|
-| `ubuntu-setup` → `dotfiles` rename | Platform migration, portability priority |
-| `lib/platform.sh` abstraction | Engineering mindset applied to dotfiles |
-| No-sudo philosophy | Corporate/restricted environment adaptation |
-| XDG compliance everywhere | Obsessive cleanliness, transferable configs |
-| Claude co-authoring commits since Nov 26 | AI-assisted development is the default |
-| `backstage-dev` plugin | Current work focus, domain knowledge capture |
-| Multi-agent orchestration workflow | Self-replicating engineering process |
-
 ## Platform Support
 
 | Platform | Status |
@@ -70,66 +58,81 @@ All software is installed at **user level** - no sudo/root required.
 
 ## Quick Start
 
-### Install Everything (Recommended for New Machines)
+### Install Everything
 ```bash
 cd ~/Developer/repos/dnjmn/dotfiles
-./install.sh --all
+for script in install/*.sh; do "$script"; done
 ```
-
-### Interactive Installation
-```bash
-cd ~/Developer/repos/dnjmn/dotfiles
-./install.sh
-```
-
-You'll be prompted to select which tools to install.
 
 ### Install Individual Tools
 ```bash
-# Install only Zsh
-./install.sh --zsh
+# Core tools
+./install/zsh.sh      # Shell with Oh-My-Zsh, Powerlevel10k
+./install/tmux.sh     # Terminal multiplexer
+./install/kitty.sh    # GPU-accelerated terminal
+./install/neovim.sh   # Editor with LazyVim
 
-# Install only Kitty Terminal
-./install.sh --kitty
+# Development
+./install/docker.sh   # Container runtime
+./install/golang.sh   # Go toolchain
 
-# Install only Tmux
-./install.sh --tmux
-
-# Or use individual install scripts
-cd zsh && ./install.sh
-cd tmux && ./install.sh
+# Applications
+./install/claude.sh   # Claude Code config
+./install/obsidian.sh # Note-taking
+./install/notion.sh   # Productivity
+./install/ollama.sh   # Local LLMs
+./install/lsd.sh      # Modern ls replacement
 ```
 
 ## Structure
 
-Each software/tool includes:
-- Installation script for automated setup
-- Configuration files (dotfiles)
-- Documentation in the `docs/` folder
+```
+dotfiles/
+├── config/           # Configuration files (symlinked to ~/.config/)
+│   ├── zsh/          # Shell config, aliases, functions
+│   ├── tmux/         # tmux.conf, statusline
+│   ├── kitty/        # Terminal config
+│   ├── neovim/       # LazyVim config
+│   └── claude/       # Claude Code settings, plugins
+├── install/          # Per-tool install scripts
+│   ├── zsh.sh
+│   ├── tmux.sh
+│   ├── kitty.sh
+│   ├── neovim.sh
+│   ├── claude.sh
+│   ├── docker.sh
+│   ├── golang.sh
+│   ├── ollama.sh
+│   ├── obsidian.sh
+│   ├── notion.sh
+│   └── lsd.sh
+├── lib/
+│   └── platform.sh   # Shared utilities
+├── docs/             # Setup guides
+├── CLAUDE.md         # Claude Code instructions
+└── README.md
+```
 
 ## Contents
 
-- **Kitty Terminal** - Modern GPU-accelerated terminal emulator with Gruvbox theme
-- **Zsh Shell** - Powerful shell with Oh My Zsh, Powerlevel10k, and productivity plugins (XDG compliant)
-- **Tmux** - Terminal multiplexer with vim-style navigation, session persistence, and sensible defaults (XDG compliant)
+- **Zsh Shell** - Oh My Zsh, Powerlevel10k, productivity plugins (XDG compliant)
+- **Tmux** - Terminal multiplexer with vim-style navigation
+- **Kitty Terminal** - GPU-accelerated terminal with Gruvbox theme
+- **Neovim** - LazyVim configuration
+- **Claude Code** - Custom plugins for Backstage development
 
 ## Documentation
 
 See the [`docs/`](docs/) folder for detailed setup guides:
 
 ### Platform-Specific
-- [macOS Setup Guide](docs/macos-setup.md) - macOS-specific instructions and troubleshooting
+- [macOS Setup Guide](docs/macos-setup.md)
 
-### Kitty Terminal
-- [Kitty Terminal Setup](docs/kitty-terminal-setup.md)
-- [Kitty Theme Changing Guide](docs/kitty-theme-changing-guide.md)
-- [Kitty Troubleshooting](docs/kitty-troubleshooting.md)
-
-### Zsh Shell
+### Tools
 - [Zsh Setup](docs/zsh-setup.md)
-
-### Tmux
 - [Tmux Setup](docs/tmux-setup.md)
+- [Kitty Terminal Setup](docs/kitty-terminal-setup.md)
+- [Neovim Setup](docs/neovim-setup.md)
 
 ## First Time Setup
 
@@ -141,24 +144,25 @@ See the [`docs/`](docs/) folder for detailed setup guides:
    cd dotfiles
    ```
 
-2. **Run the master install script:**
+2. **Install tools:**
    ```bash
-   ./install.sh --all    # Install everything
-   # or
-   ./install.sh          # Interactive mode
+   # Install everything
+   for script in install/*.sh; do "$script"; done
+
+   # Or pick what you need
+   ./install/zsh.sh
+   ./install/tmux.sh
    ```
 
-3. **Follow post-installation steps:**
-   - Log out and log back in if you installed Zsh
+3. **Post-installation:**
+   - Log out and back in if you installed Zsh
    - Configure Powerlevel10k when prompted
    - Add secrets to `~/.config/zsh/env.zsh`
-   - Install Tmux plugins: Start tmux, then press `Ctrl+a` then `Shift+i`
-   - Review documentation in `docs/` folder
+   - Install Tmux plugins: Start tmux, press `Ctrl+a` then `Shift+i`
 
 ## Features
 
-- **XDG Compliant:** Keeps your home directory clean by following XDG Base Directory specification
-- **Automated Installation:** One script to set up everything on a new machine
-- **Version Controlled Dotfiles:** All configurations tracked in git
-- **Comprehensive Documentation:** Every tool has detailed setup and troubleshooting guides
-- **Fast Setup:** Get your development environment ready in minutes
+- **XDG Compliant:** Keeps your home directory clean
+- **No Orchestrator:** Run scripts directly, no magic
+- **Per-Tool Scripts:** Each tool declares its own dependencies
+- **Version Controlled:** All configurations tracked in git

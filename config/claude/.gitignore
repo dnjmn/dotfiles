@@ -1,0 +1,24 @@
+# Claude Code runtime files (auto-generated)
+cache/
+debug/
+file-history/
+history.jsonl
+plans/
+projects/
+session-env/
+shell-snapshots/
+stats-cache.json
+statsig/
+tasks/
+telemetry/
+todos/
+
+# Plugin cache (downloaded on install)
+plugins/cache/
+plugins/install-counts-cache.json
+plugins/installed_plugins.json
+plugins/known_marketplaces.json
+plugins/marketplaces/
+
+# Local settings overrides
+settings.local.json
