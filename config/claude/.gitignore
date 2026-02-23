@@ -22,3 +22,8 @@ plugins/marketplaces/
 
 # Local settings overrides
 settings.local.json
+
+# Runtime caches
+backups/
+paste-cache/
+mcp-needs-auth-cache.json
