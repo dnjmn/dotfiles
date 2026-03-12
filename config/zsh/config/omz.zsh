@@ -30,6 +30,9 @@ plugins=(
   dirhistory                    # Alt+Left/Right for directory navigation
   copypath                      # Copy current directory path to clipboard
 
+  # Vi mode
+  vi-mode                       # Vi keybindings with cursor shape switching
+
   # Utility
   sudo                          # ESC ESC to prefix command with sudo
   extract                       # Smart archive extraction

@@ -1,5 +1,4 @@
 {
-  "model": "claude-opus-4-6",
   "enabledPlugins": {
     "context7@claude-plugins-official": true,
     "frontend-design@claude-plugins-official": true,
@@ -21,6 +20,10 @@
     "claude-md-management@claude-plugins-official": true,
     "Notion@claude-plugins-official": true,
     "plugin-dev@claude-plugins-official": true,
-    "explanatory-output-style@claude-plugins-official": false
-  }
+    "explanatory-output-style@claude-plugins-official": false,
+    "ralph-loop@claude-plugins-official": true,
+    "skill-creator@claude-plugins-official": true
+  },
+  "effortLevel": "high",
+  "promptSuggestionEnabled": false
 }

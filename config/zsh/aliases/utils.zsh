@@ -22,3 +22,5 @@ alias egrep="egrep --color=auto"
 alias claer="clear"
 alias celar="clear"
 alias clar="clear"
+
+alias v="nvim"
