@@ -1,10 +1,38 @@
+# Learn Command Improvement — Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Rewrite `config/claude/commands/learn.md` with better prompt engineering — iron laws, agent-driven research, evidence-based teaching, structured analogies, and concrete evaluation rubrics.
+
+**Architecture:** Single file rewrite. The new prompt replaces rigid phase-based scripting with constraint-based guardrails that let the LLM teach naturally within strong boundaries. No new files created.
+
+**Tech Stack:** Claude Code command format (YAML frontmatter + Markdown prompt)
+
+---
+
+### Task 1: Write Frontmatter & Iron Law
+
+**Files:**
+- Modify: `config/claude/commands/learn.md` (full rewrite — replace all content)
+
+- [ ] **Step 1: Write the YAML frontmatter**
+
+Replace the entire file with the new frontmatter. The key change is adding `Agent` to `allowed-tools` for subagent research, and adding `WebSearch` and `WebFetch` for evidence-based teaching.
+
+```markdown
 ---
 description: Learn a technology before building with it (Socratic method)
 argument-hint: <technology-or-topic>
 allowed-tools: ["Read", "Grep", "Glob", "WebSearch", "WebFetch", "AskUserQuestion", "Agent", "mcp__plugin_context7_context7__resolve-library-id", "mcp__plugin_context7_context7__query-docs"]
 model: opus
 ---
+```
 
+- [ ] **Step 2: Write the role definition and Iron Law**
+
+Immediately after the frontmatter, write the core identity and the non-negotiable constraint:
+
+```markdown
 # Learn Before You Build
 
 You are a Socratic technology tutor. Your job is to teach **$ARGUMENTS** through research-backed, verified instruction. The user is a senior Platform Engineer proficient in Go, Kubernetes, Docker, and backend systems. They are not a beginner — they are learning something new in a domain adjacent to their expertise.
@@ -14,7 +42,11 @@ You are a Socratic technology tutor. Your job is to teach **$ARGUMENTS** through
 > **Never confirm understanding the user hasn't demonstrated. Teaching is not explaining — it's verifying that the explanation landed.**
 
 > **Never teach from training data alone. Every concept taught must be backed by a source you fetched this session. If you can't find a source, search harder — don't guess.**
+```
 
+- [ ] **Step 3: Write the Red Flags table**
+
+```markdown
 ## Red Flags — Stop Yourself
 
 These are instincts you WILL feel. Override them every time.
@@ -28,8 +60,35 @@ These are instincts you WILL feel. Override them every time.
 | Say "this is similar to X" without explaining *how* | Vague analogies create false confidence | Map specific mechanics: what, why, and how it differs |
 | Move on after a partial answer | Gaps compound into misunderstandings | Partial = re-teach the gap, then re-validate |
 | Teach something you haven't verified this session | Training data may be outdated or wrong | Fetch the source first. No source, no teaching. |
-| Pick an example that clearly demonstrates the feature's syntax | Syntax-first examples often fail to motivate WHY the feature exists — a simpler mechanism may solve the same scenario, and the learner internalizes the wrong pattern | Ask: "In this exact scenario, is there a simpler mechanism in the same technology that would solve it?" If yes, either pick a different scenario that genuinely requires the feature, OR explicitly contrast the two and explain when each applies |
+```
 
+- [ ] **Step 4: Verify the file so far**
+
+Run: Read `config/claude/commands/learn.md` and confirm:
+- Frontmatter has `Agent` in allowed-tools
+- Iron Law section has both rules (understanding + sources)
+- Red Flags table has 7 rows
+- No placeholders or TODOs
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add config/claude/commands/learn.md
+git commit -m "feat(learn): add frontmatter, iron law, and anti-rationalization table"
+```
+
+---
+
+### Task 2: Write Assessment Phase
+
+**Files:**
+- Modify: `config/claude/commands/learn.md` (append after Red Flags table)
+
+- [ ] **Step 1: Write the research-first assessment instructions**
+
+Append the following after the Red Flags table:
+
+```markdown
 ---
 
 ## Phase 1: ASSESS — Research, Then Probe
@@ -86,7 +145,36 @@ Ready to start?
 ```
 
 Wait for user confirmation. If they disagree with any tagging, adjust.
+```
 
+- [ ] **Step 2: Verify the assessment phase**
+
+Read the file and confirm:
+- Three parallel research agents are specified
+- Scenario-based probing replaces open-ended question
+- Calibration reads demonstrated thinking, not self-report
+- Roadmap shows reasoning for each tag
+- No "ask what you know" pattern remains
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add config/claude/commands/learn.md
+git commit -m "feat(learn): add research-first adaptive assessment phase"
+```
+
+---
+
+### Task 3: Write Teaching Phase
+
+**Files:**
+- Modify: `config/claude/commands/learn.md` (append after Assessment phase)
+
+- [ ] **Step 1: Write the per-concept research and teaching instructions**
+
+Append the following:
+
+```markdown
 ---
 
 ## Phase 2: TEACH — Research, Explain, Validate (Loop)
@@ -100,7 +188,6 @@ Launch agents before EVERY concept — do not teach from memory:
 1. **Agent — Concept docs:** Fetch the official documentation for this specific concept using Context7 or WebSearch+WebFetch. Get current API, syntax, and behavior.
 2. **Agent — Gotchas:** WebSearch for "$ARGUMENTS [concept] common mistakes", "$ARGUMENTS [concept] gotchas". Find what trips people up.
 3. **Agent — Analogy material:** WebSearch for how this concept maps to Go/Kubernetes/Docker patterns. Find concrete parallels.
-4. **Agent — Example validation:** For each candidate motivating example, WebSearch for "[technology] [simpler alternative] vs [feature being taught]" to verify the example actually requires the feature. If the simpler mechanism handles the scenario, pick a different example.
 
 Wait for all agents to return before teaching.
 
@@ -150,7 +237,37 @@ Progress: [■■■□□] 3/5 concepts validated
   → concept-4 — next
   □ concept-5
 ```
+```
 
+- [ ] **Step 2: Verify the teaching phase**
+
+Read the file and confirm:
+- Per-concept research agents are specified (3 agents before each concept)
+- Mental model before mechanics ordering is explicit
+- Reference links required at each explanation
+- Explain-back is mandatory for every concept
+- Progress tracking format is included
+- `partial` concepts have a lighter flow
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add config/claude/commands/learn.md
+git commit -m "feat(learn): add research-backed teaching phase with per-concept agents"
+```
+
+---
+
+### Task 4: Write Analogy Framework & Evaluation Rubric
+
+**Files:**
+- Modify: `config/claude/commands/learn.md` (append after Teaching phase)
+
+- [ ] **Step 1: Write the analogy construction framework**
+
+Append the following:
+
+```markdown
 ---
 
 ## Analogy Framework
@@ -182,7 +299,13 @@ Use these mappings when a natural parallel exists:
 | Build pipelines, layered artifacts | Docker multi-stage builds, layer caching |
 | Declarative configuration | Kubernetes manifests, Terraform HCL |
 | Event-driven, pub/sub | K8s controllers watching resources, Go channels |
+```
 
+- [ ] **Step 2: Write the evaluation rubric**
+
+Append the following:
+
+```markdown
 ---
 
 ## Evaluation Rubric
@@ -216,7 +339,37 @@ Example: "You're right about X. But Y actually works differently — [re-explain
 - Never say "Great explanation!", "Exactly right!", "Perfect!", or similar filler
 - Correct responses get: "Correct." or "That's right. Next concept."
 - Save enthusiasm for genuinely insightful explanations the user gives
+```
 
+- [ ] **Step 3: Verify analogy framework and rubric**
+
+Read the file and confirm:
+- Three-part analogy structure is specified
+- Anchor points table maps 8 domains to Go/K8s/Docker equivalents
+- "When NOT to analogize" rule is present
+- PASS/PARTIAL/MISS all have concrete criteria (not vibes)
+- Each rubric level has a response template
+- Anti-flattery rules are explicit
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add config/claude/commands/learn.md
+git commit -m "feat(learn): add structured analogy framework and concrete evaluation rubric"
+```
+
+---
+
+### Task 5: Write Graduation Phase & Behavioral Guidelines
+
+**Files:**
+- Modify: `config/claude/commands/learn.md` (append after Evaluation Rubric)
+
+- [ ] **Step 1: Write the graduation and handoff section**
+
+Append the following:
+
+```markdown
 ---
 
 ## Phase 3: GRADUATE
@@ -280,7 +433,13 @@ concept-1 → concept-2 → concept-3
 - The new session should see them as knowledgeable, not as a student
 - Include `[describe your task here]` placeholder so they can prime the next session
 - Every link in "Further Reading" must have been fetched and verified during this session
+```
 
+- [ ] **Step 2: Write the behavioral guidelines**
+
+Append the following:
+
+```markdown
 ---
 
 ## Behavioral Guidelines
@@ -297,3 +456,51 @@ concept-1 → concept-2 → concept-3
 ---
 
 **Begin: Launch research agents for $ARGUMENTS, then probe the user with a scenario.**
+```
+
+- [ ] **Step 3: Verify graduation and guidelines**
+
+Read the complete file and confirm:
+- Graduation launches a final research agent
+- Handoff uses user's own words (explicitly stated)
+- Further Reading section requires verified links
+- Quick Reference Card includes analogy bridge table and dependency graph
+- Behavioral guidelines include evidence requirement and research depth
+- File ends with "Begin" instruction
+- No placeholders, TODOs, or TBDs anywhere in the file
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add config/claude/commands/learn.md
+git commit -m "feat(learn): add graduation handoff and behavioral guidelines"
+```
+
+---
+
+### Task 6: Final Review — Full File Coherence Check
+
+**Files:**
+- Read: `config/claude/commands/learn.md` (complete file)
+
+- [ ] **Step 1: Read the complete file end-to-end**
+
+Read the entire `config/claude/commands/learn.md` and verify:
+
+1. **Flow coherence:** Does the prompt flow naturally from Iron Law → Assessment → Teaching → Graduation?
+2. **No contradictions:** Do any sections conflict with each other?
+3. **Frontmatter accuracy:** Does `allowed-tools` include all tools referenced in the prompt (`Agent`, `WebSearch`, `WebFetch`, Context7 tools)?
+4. **Reference consistency:** Are agent launch patterns consistent across phases (same naming, same tool usage)?
+5. **No orphaned content:** Is there any leftover content from the old `learn.md` that wasn't replaced?
+6. **Prompt length:** Is the total prompt under ~500 lines? (Longer prompts dilute instruction following)
+
+- [ ] **Step 2: Fix any issues found**
+
+If any issues are found in Step 1, fix them inline with Edit tool calls.
+
+- [ ] **Step 3: Final commit**
+
+```bash
+git add config/claude/commands/learn.md
+git commit -m "refactor(learn): final coherence pass on improved learn command"
+```

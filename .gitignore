@@ -3,8 +3,17 @@ neovim/lazy-lock.json
 # macOS
 .DS_Store
 
-# Claude Code
+# Claude Code - runtime/state/cache (not config)
 **/stats-cache.json
+config/claude/daemon*
+config/claude/.last-*
+config/claude/jobs/
+config/claude/sessions/
+config/claude/security/
+config/claude/security_warnings_state_*.json
+config/claude/plugins/.last_inuse_sweep
+config/claude/plugins/plugin-catalog-cache.json
+config/claude/skills/*-workspace/
 
 # External reference docs (not tracked)
 claude/config/plugins/local/backstage-dev/docs/
