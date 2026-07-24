@@ -62,6 +62,7 @@ Returns via schema:
 | `mergeBase` | `git merge-base main HEAD` — BASE for the final review |
 | `currentBranch` | For the main/master guard |
 | `completedTasks[]` | Parsed from `.superpowers/sdd/progress.md` |
+| `scriptsDir` | Absolute path to the SDD skill's `scripts/` directory, discovered by glob. The superpowers plugin path is version-pinned (`.../superpowers/6.1.1/...`), so hardcoding it would break on every plugin upgrade. |
 
 **Gates.** Non-empty `conflicts` not covered by `args.decisions` → return. Branch is
 `main`/`master` without `args.allowMainBranch` → return. Tasks listed in
@@ -127,12 +128,16 @@ cost, which does not exist in a JS script.
 
 ### Phase 3 — Final whole-branch review (fan-out)
 
-Three dimension reviewers run in `parallel` on the most capable model, grouped from
-`requesting-code-review/code-reviewer.md`'s checklist:
+Three dimension reviewers run in `parallel` on the most capable model, grouping
+`requesting-code-review/code-reviewer.md`'s five checklist areas into three agents:
 
-1. Plan alignment across the whole branch
-2. Code quality and architecture
-3. Testing and production readiness
+1. **Plan alignment** — plan/requirements match across the whole branch, plus whether
+   later tasks undid or contradicted earlier ones
+2. **Code quality and architecture** — separation of concerns, error handling, DRY,
+   edge cases, scalability, security, integration; and duplication or drifting
+   abstractions across task boundaries, which per-task reviews structurally cannot see
+3. **Testing and production readiness** — real-behaviour tests, edge cases, integration
+   tests, migrations, backward compatibility, documentation
 
 Each generates its own review package with an explicit distinct `OUTFILE`
 (`review-final-<dimension>.diff`) over `mergeBase..HEAD`, so concurrent writes cannot
