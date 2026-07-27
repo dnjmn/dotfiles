@@ -284,3 +284,162 @@ test('a completed task appends a ledger line', async () => {
   assert.deepEqual(result.completed, [1])
   assert.deepEqual(result.ledgerLines, ['Task 1: complete (commits aaaaaaa..bbbbbbb, review clean)'])
 })
+
+const FINDING = (id) => ({ severity: 'Important', location: `src/a.ts:${id}`, what: `wrong ${id}`, why: 'breaks', fix: 'do it right' })
+
+const FIX_OK = (headSha) => ({
+  headSha,
+  fixesApplied: ['corrected the guard'],
+  testsRun: ['tests/a.test.ts'],
+  command: 'npm test -- tests/a.test.ts',
+  output: '2/2 passing',
+})
+
+const ONE_TASK = { ...PREFLIGHT_OK, tasks: [PREFLIGHT_OK.tasks[0]] }
+
+test('the reviewer generates its own review package and gets the constraints verbatim', async () => {
+  const { calls } = await runWorkflow(SDD_PATH, {
+    args: { planPath: 'plan.md' },
+    agent: scripted({ preflight: ONE_TASK, 'impl:1': DONE('bbbbbbb'), 'review:1': CLEAN_REVIEW }),
+  })
+  const prompt = callsByLabel(calls, 'review:1')[0].prompt
+  assert.match(prompt, /review-package aaaaaaa bbbbbbb/)
+  assert.match(prompt, /Timeout is exactly 30s\./)
+  assert.match(prompt, /task-brief.*plan\.md 1/)
+  assert.match(prompt, /\.superpowers\/sdd\/task-1-report\.md/)
+  assert.equal(callsByLabel(calls, 'review:1')[0].opts.model, 'sonnet')
+})
+
+test('plan-mandated findings gate to the human without dispatching a fixer', async () => {
+  const planMandated = [{ severity: 'Important', location: 'src/a.ts:9', what: 'test asserts nothing', why: 'no coverage', fix: 'assert behaviour', planText: 'assert true' }]
+  const { result, calls } = await runWorkflow(SDD_PATH, {
+    args: { planPath: 'plan.md' },
+    agent: scripted({
+      preflight: ONE_TASK,
+      'impl:1': DONE('bbbbbbb'),
+      'review:1': { ...CLEAN_REVIEW, planMandated },
+    }),
+  })
+  assert.equal(result.needsDecision.kind, 'plan_mandated')
+  assert.deepEqual(result.needsDecision.findings, planMandated)
+  assert.equal(callsByLabel(calls, 'fix:1').length, 0)
+})
+
+test('cannotVerify items go to a resolver and satisfied ones do not trigger a fix', async () => {
+  const { calls, result } = await runWorkflow(SDD_PATH, {
+    args: { planPath: 'plan.md' },
+    agent: scripted({
+      preflight: ONE_TASK,
+      'impl:1': DONE('bbbbbbb'),
+      'review:1': { ...CLEAN_REVIEW, cannotVerify: ['timeout applied at call site'] },
+      'resolve:1': { items: [{ item: 'timeout applied at call site', verdict: 'satisfied', evidence: 'src/b.ts:14 sets 30s' }] },
+    }),
+  })
+  assert.equal(callsByLabel(calls, 'resolve:1').length, 1)
+  assert.equal(callsByLabel(calls, 'fix:1').length, 0)
+  assert.equal(result.status, 'complete')
+})
+
+test('a resolver real_gap becomes a blocking finding and triggers one fix', async () => {
+  let reviews = 0
+  const { calls, result } = await runWorkflow(SDD_PATH, {
+    args: { planPath: 'plan.md' },
+    agent: scripted({
+      preflight: ONE_TASK,
+      'impl:1': DONE('bbbbbbb'),
+      'review:1': () => {
+        reviews += 1
+        return reviews === 1 ? { ...CLEAN_REVIEW, cannotVerify: ['timeout applied'] } : CLEAN_REVIEW
+      },
+      'resolve:1': { items: [{ item: 'timeout applied', verdict: 'real_gap', evidence: 'no call site sets it' }] },
+      'fix:1': FIX_OK('ddddddd'),
+    }),
+  })
+  assert.equal(callsByLabel(calls, 'fix:1').length, 1)
+  assert.equal(reviews, 2)
+  assert.equal(result.status, 'complete')
+  assert.deepEqual(result.ledgerLines, ['Task 1: complete (commits aaaaaaa..ddddddd, review clean)'])
+})
+
+test('all blocking findings go to exactly one fixer, not one per finding', async () => {
+  let reviews = 0
+  const { calls } = await runWorkflow(SDD_PATH, {
+    args: { planPath: 'plan.md' },
+    agent: scripted({
+      preflight: ONE_TASK,
+      'impl:1': DONE('bbbbbbb'),
+      'review:1': () => {
+        reviews += 1
+        return reviews === 1
+          ? { ...CLEAN_REVIEW, specVerdict: 'fail', qualityVerdict: 'needs_fixes', critical: [FINDING(1)], important: [FINDING(2), FINDING(3)] }
+          : CLEAN_REVIEW
+      },
+      'fix:1': FIX_OK('ddddddd'),
+    }),
+  })
+  assert.equal(callsByLabel(calls, 'fix:1').length, 1)
+  const prompt = callsByLabel(calls, 'fix:1')[0].prompt
+  for (const id of [1, 2, 3]) assert.match(prompt, new RegExp(`wrong ${id}`))
+})
+
+test('re-review runs against the fixer new head', async () => {
+  let reviews = 0
+  const { calls } = await runWorkflow(SDD_PATH, {
+    args: { planPath: 'plan.md' },
+    agent: scripted({
+      preflight: ONE_TASK,
+      'impl:1': DONE('bbbbbbb'),
+      'review:1': () => {
+        reviews += 1
+        return reviews === 1 ? { ...CLEAN_REVIEW, qualityVerdict: 'needs_fixes', important: [FINDING(1)] } : CLEAN_REVIEW
+      },
+      'fix:1': FIX_OK('ddddddd'),
+    }),
+  })
+  assert.match(callsByLabel(calls, 'review:1')[1].prompt, /review-package aaaaaaa ddddddd/)
+})
+
+test('a fix report missing test evidence is re-dispatched once then gates', async () => {
+  const { calls, result } = await runWorkflow(SDD_PATH, {
+    args: { planPath: 'plan.md' },
+    agent: scripted({
+      preflight: ONE_TASK,
+      'impl:1': DONE('bbbbbbb'),
+      'review:1': { ...CLEAN_REVIEW, qualityVerdict: 'needs_fixes', important: [FINDING(1)] },
+      'fix:1': { ...FIX_OK('ddddddd'), output: '' },
+    }),
+  })
+  assert.equal(callsByLabel(calls, 'fix:1').length, 2)
+  assert.match(callsByLabel(calls, 'fix:1')[1].prompt, /did not include/)
+  assert.equal(result.needsDecision.kind, 'fix_evidence_missing')
+})
+
+test('the fix loop is bounded at two rounds', async () => {
+  const { calls, result } = await runWorkflow(SDD_PATH, {
+    args: { planPath: 'plan.md' },
+    agent: scripted({
+      preflight: ONE_TASK,
+      'impl:1': DONE('bbbbbbb'),
+      'review:1': { ...CLEAN_REVIEW, qualityVerdict: 'needs_fixes', important: [FINDING(1)] },
+      'fix:1': FIX_OK('ddddddd'),
+    }),
+  })
+  assert.equal(callsByLabel(calls, 'fix:1').length, 2)
+  assert.equal(callsByLabel(calls, 'review:1').length, 3)
+  assert.equal(result.needsDecision.kind, 'review_stuck')
+})
+
+test('minor findings accumulate rather than being discarded', async () => {
+  const minor = [{ severity: 'Minor', location: 'src/a.ts:2', what: 'naming', why: 'clarity', fix: 'rename' }]
+  const { result } = await runWorkflow(SDD_PATH, {
+    args: { planPath: 'plan.md' },
+    agent: scripted({
+      preflight: ONE_TASK,
+      'impl:1': DONE('bbbbbbb'),
+      'review:1': { ...CLEAN_REVIEW, minor },
+    }),
+  })
+  assert.equal(result.minorLedger.length, 1)
+  assert.equal(result.minorLedger[0].task, 1)
+  assert.equal(result.minorLedger[0].what, 'naming')
+})

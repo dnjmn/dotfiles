@@ -108,6 +108,96 @@ const IMPLEMENTER_SCHEMA = {
   required: ['status', 'headSha', 'commits', 'testSummary', 'concerns', 'interfaces', 'reportPath'],
 }
 
+const FINDING_SCHEMA = {
+  type: 'object',
+  properties: {
+    severity: { type: 'string', enum: ['Critical', 'Important', 'Minor'] },
+    location: { type: 'string' },
+    what: { type: 'string' },
+    why: { type: 'string' },
+    fix: { type: 'string' },
+  },
+  required: ['severity', 'location', 'what', 'why', 'fix'],
+}
+
+const PLAN_MANDATED_SCHEMA = {
+  type: 'object',
+  properties: {
+    severity: { type: 'string' },
+    location: { type: 'string' },
+    what: { type: 'string' },
+    why: { type: 'string' },
+    fix: { type: 'string' },
+    planText: { type: 'string' },
+  },
+  required: ['severity', 'location', 'what', 'why', 'fix', 'planText'],
+}
+
+const REVIEWER_SCHEMA = {
+  type: 'object',
+  properties: {
+    specVerdict: { type: 'string', enum: ['pass', 'fail'] },
+    specIssues: { type: 'array', items: { type: 'string' } },
+    cannotVerify: { type: 'array', items: { type: 'string' } },
+    strengths: { type: 'string' },
+    critical: { type: 'array', items: FINDING_SCHEMA },
+    important: { type: 'array', items: FINDING_SCHEMA },
+    minor: { type: 'array', items: FINDING_SCHEMA },
+    planMandated: { type: 'array', items: PLAN_MANDATED_SCHEMA },
+    qualityVerdict: { type: 'string', enum: ['approved', 'needs_fixes'] },
+  },
+  required: ['specVerdict', 'specIssues', 'cannotVerify', 'strengths', 'critical', 'important', 'minor', 'planMandated', 'qualityVerdict'],
+}
+
+const RESOLVER_SCHEMA = {
+  type: 'object',
+  properties: {
+    items: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          item: { type: 'string' },
+          verdict: { type: 'string', enum: ['satisfied', 'real_gap'] },
+          evidence: { type: 'string' },
+        },
+        required: ['item', 'verdict', 'evidence'],
+      },
+    },
+  },
+  required: ['items'],
+}
+
+const FIX_SCHEMA = {
+  type: 'object',
+  properties: {
+    headSha: { type: 'string' },
+    fixesApplied: { type: 'array', items: { type: 'string' } },
+    testsRun: { type: 'array', items: { type: 'string' } },
+    command: { type: 'string' },
+    output: { type: 'string' },
+  },
+  required: ['headSha', 'fixesApplied', 'testsRun', 'command', 'output'],
+}
+
+function fixEvidenceComplete(fix) {
+  return Boolean(
+    fix &&
+      Array.isArray(fix.testsRun) &&
+      fix.testsRun.length > 0 &&
+      typeof fix.command === 'string' &&
+      fix.command.trim() !== '' &&
+      typeof fix.output === 'string' &&
+      fix.output.trim() !== '',
+  )
+}
+
+function describeFindings(findings) {
+  return findings
+    .map((finding, index) => `${index + 1}. [${finding.severity}] ${finding.location} — ${finding.what}. Why it matters: ${finding.why}. Suggested fix: ${finding.fix}`)
+    .join('\n')
+}
+
 function implementerPrompt(task, context) {
   return `You are implementing Task ${task.n}: ${task.title}
 
@@ -166,6 +256,110 @@ Then return:
 Use DONE_WITH_CONCERNS if you completed the work but have doubts about correctness. Never silently produce work you are unsure about.`
 }
 
+function reviewerPrompt(task, baseSha, headSha, context) {
+  return `You are reviewing one task's implementation: first whether it matches its requirements, then whether it is well-built. This is a task-scoped gate, not a merge review — a broad whole-branch review happens separately after all tasks are complete.
+
+## What Was Requested
+
+Run this, then read the file it names — it is the task's requirements:
+
+  ${context.scriptsDir}/task-brief ${context.planPath} ${task.n}
+
+Global constraints from the spec that bind this task:
+${context.globalConstraints || '(none stated)'}
+
+## What the Implementer Claims They Built
+
+Read the implementer's report: ${context.reportPath}
+${context.concerns ? `\nThe implementer flagged these doubts. Verify each specifically and say what you found:\n${context.concerns}` : ''}
+
+## Diff Under Review
+
+Run this, then read the file it names — it holds the commit list, the stat summary, and the full diff with context:
+
+  ${context.scriptsDir}/review-package ${baseSha} ${headSha}
+
+Base: ${baseSha}
+Head: ${headSha}
+Range: ${baseSha}..${headSha}
+
+The diff's context lines ARE the changed files: do not Read a changed file separately unless a hunk you must judge is cut off mid-function, and say so if you do. Do not crawl the broader codebase. Inspect code outside the diff only to evaluate a concrete risk you can name — one focused check per named risk, naming both the risk and what you checked. Cross-cutting changes are legitimate named risks: if the diff changes lock ordering, a function or API contract, or shared mutable state, checking the call sites is the right method.
+
+Your review is read-only on this checkout. Do not mutate the working tree, the index, HEAD, or branch state in any way.
+
+## Do Not Trust the Report
+
+Treat the report as unverified claims. Verify them against the diff. Design rationales are claims too: "left it per YAGNI" or "kept it simple deliberately" is the implementer grading their own work. A stated rationale never downgrades a finding's severity.
+
+## Tests
+
+The implementer already ran the tests and reported results for exactly this code. Do not re-run the suite to confirm their report. Run a test only when reading the code raises a specific doubt no existing run answers, and then a focused test — never a package-wide suite, race detector run, or high-count loop. If heavy validation seems warranted, recommend it instead of running it. Warnings or other noise in the reported test output are findings: test output should be pristine.
+
+## Part 1: Spec Compliance
+
+Compare the diff against what was requested. Report what is Missing (requirements skipped, or claimed without being implemented), Extra (anything not requested, over-engineering), and Misunderstood (right feature built the wrong way). If a requirement cannot be verified from this diff alone because it lives in unchanged code or spans tasks, put it in cannotVerify instead of broadening your search.
+
+## Part 2: Code Quality
+
+Judge separation of concerns, error handling, DRY without premature abstraction, and edge cases. Judge whether the new and changed tests verify real behaviour rather than mocks, and whether the task's edge cases are covered. Judge whether each file has one clear responsibility, whether units can be understood and tested independently, and whether this change created files that are already large or significantly grew existing ones. Do not flag pre-existing file sizes — only what this change contributed.
+
+Every finding needs a file:line reference.
+
+## Calibration
+
+Categorize by actual severity. Not everything is Critical. Important means the task cannot be trusted until it is fixed: incorrect or fragile behaviour, a missed requirement, or maintainability damage you would block a merge over — verbatim duplication of a logic block, swallowed errors, tests that assert nothing. "Coverage could be broader" and polish are Minor.
+
+If the plan or brief explicitly mandates something this rubric calls a defect, that IS a finding: put it in planMandated with the mandating plan text quoted exactly. The plan's authorship does not grade its own work; the human decides. Do not also list it under critical or important.
+
+Acknowledge what was done well in strengths before listing issues.`
+}
+
+function resolverPrompt(task, items, context) {
+  return `A task reviewer could not verify these requirements from task ${task.n}'s diff alone, because they live in unchanged code or span several tasks:
+
+${items.map((item, index) => `${index + 1}. ${item}`).join('\n')}
+
+You hold what the reviewer lacked: the whole plan and the whole repository.
+
+For each item, determine whether the requirement is actually satisfied somewhere in the current tree, or is a real gap. Read the plan at ${context.planPath} for cross-task context, and inspect the repository as needed.
+
+Global constraints that bind this work:
+${context.globalConstraints || '(none stated)'}
+
+Answer each item with verdict "satisfied" or "real_gap" and cite concrete evidence — a file:line where the requirement is met, or a specific statement of what you searched and did not find. Default to "real_gap" only when you have genuinely looked and it is absent; do not guess in either direction.
+
+Your review is read-only. Do not modify the working tree, the index, HEAD, or branch state.`
+}
+
+function fixPrompt(task, findings, context) {
+  return `You are fixing review findings on Task ${task.n}: ${task.title}
+
+${context.evidenceGap ? `Your previous fix report ${context.evidenceGap}. Apply the fixes if you have not already, then re-run the covering tests and report the command and its real output this time.\n` : ''}
+## Findings to Fix
+
+Fix all of these in one pass:
+
+${describeFindings(findings)}
+
+## Requirements
+
+Run this, then read the file it names — it holds the task's requirements and the exact values you must use:
+
+  ${context.scriptsDir}/task-brief ${context.planPath} ${task.n}
+
+Global constraints binding this task:
+${context.globalConstraints || '(none stated)'}
+
+## Your Job
+
+1. Fix every finding above. Do not fix anything else, and do not add features.
+2. Re-run the tests covering the code you amended. These are the covering tests: ${context.coveringTests}. A targeted fix does not need the whole suite.
+3. Append your fix report — what you changed, and the test command with its output — to ${context.reportPath}.
+4. Commit your work.
+
+Then return: headSha (the 7-character short SHA of HEAD after your commits, from "git rev-parse --short HEAD"), fixesApplied, testsRun (the test files you actually ran), command (the exact command), and output (its real output). All five are required, and the re-review will not proceed without genuine test evidence.`
+}
+
 function nextModel(model) {
   const index = MODEL_LADDER.indexOf(model)
   if (index === -1 || index === MODEL_LADDER.length - 1) return null
@@ -195,12 +389,107 @@ const state = {
 }
 
 async function reviewTask(task, baseSha, implementer, preflight, state) {
-  const review = await agent(
-    `Review task ${task.n} over ${baseSha}..${implementer.headSha}. Implementer concerns: ${implementer.concerns.join('; ') || 'none'}.`,
-    { label: `review:${task.n}`, phase: 'Tasks', model: task.reviewerModel, schema: null },
-  )
-  if (!review) return { gate: gate('reviewer_failed', { task: task.n }, state) }
-  return { head: implementer.headSha }
+  const context = {
+    planPath: args.planPath,
+    scriptsDir: preflight.scriptsDir,
+    globalConstraints: preflight.globalConstraints,
+    reportPath: `.superpowers/sdd/task-${task.n}-report.md`,
+    concerns: implementer.concerns.join('\n'),
+    coveringTests: 'the test files touched by this task',
+    evidenceGap: null,
+  }
+
+  let head = implementer.headSha
+  let round = 0
+
+  while (true) {
+    const review = await agent(reviewerPrompt(task, baseSha, head, context), {
+      label: `review:${task.n}`,
+      phase: 'Tasks',
+      model: task.reviewerModel,
+      schema: REVIEWER_SCHEMA,
+    })
+
+    if (!review) {
+      return { gate: gate('reviewer_failed', { task: task.n, message: `The reviewer for task ${task.n} returned no result.` }, state) }
+    }
+
+    if (review.planMandated.length > 0) {
+      return {
+        gate: gate('plan_mandated', {
+          task: task.n,
+          findings: review.planMandated,
+          message: `Task ${task.n}'s review found defects the plan itself mandates. Decide which governs — the plan or the rubric — then resume.`,
+        }, state),
+      }
+    }
+
+    let gaps = []
+    if (review.cannotVerify.length > 0) {
+      const resolved = await agent(resolverPrompt(task, review.cannotVerify, context), {
+        label: `resolve:${task.n}`,
+        phase: 'Tasks',
+        model: task.implementerModel,
+        schema: RESOLVER_SCHEMA,
+      })
+      gaps = (resolved ? resolved.items : [])
+        .filter((entry) => entry.verdict === 'real_gap')
+        .map((entry) => ({
+          severity: 'Important',
+          location: 'unverified requirement',
+          what: entry.item,
+          why: 'The reviewer could not verify it from the diff and a resolver confirmed it is absent.',
+          fix: entry.evidence,
+        }))
+    }
+
+    const blocking = [...review.critical, ...review.important, ...gaps]
+    const clean = blocking.length === 0 && review.specVerdict === 'pass' && review.qualityVerdict === 'approved'
+
+    if (clean) {
+      for (const finding of review.minor) state.minorLedger.push({ task: task.n, ...finding })
+      return { head }
+    }
+
+    if (round >= MAX_FIX_ROUNDS) {
+      return {
+        gate: gate('review_stuck', {
+          task: task.n,
+          rounds: round,
+          findings: blocking,
+          specIssues: review.specIssues,
+          message: `Task ${task.n} still fails review after ${round} fix rounds. The plan or the approach likely needs to change.`,
+        }, state),
+      }
+    }
+
+    round += 1
+    let fix = await agent(fixPrompt(task, blocking, context), {
+      label: `fix:${task.n}`,
+      phase: 'Tasks',
+      model: task.implementerModel,
+      effort: task.implementerEffort,
+      schema: FIX_SCHEMA,
+    })
+
+    if (!fixEvidenceComplete(fix)) {
+      fix = await agent(
+        fixPrompt(task, blocking, { ...context, evidenceGap: 'did not include the covering tests, the command run, and its output' }),
+        { label: `fix:${task.n}`, phase: 'Tasks', model: task.implementerModel, effort: task.implementerEffort, schema: FIX_SCHEMA },
+      )
+    }
+
+    if (!fixEvidenceComplete(fix)) {
+      return {
+        gate: gate('fix_evidence_missing', {
+          task: task.n,
+          message: `The fixer for task ${task.n} twice failed to report covering tests, the command run, and its output. Re-review cannot proceed without test evidence.`,
+        }, state),
+      }
+    }
+
+    head = fix.headSha
+  }
 }
 
 phase('Preflight')
