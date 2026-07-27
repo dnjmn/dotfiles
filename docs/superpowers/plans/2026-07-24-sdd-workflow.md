@@ -23,7 +23,7 @@ Every task's requirements implicitly include this section.
 - A task's review BASE is `previousTask.headSha ?? preflight.baseSha`. `HEAD~1` MUST NOT appear anywhere in the file.
 - Agent labels are exactly: `preflight`, `impl:<n>`, `review:<n>`, `resolve:<n>`, `fix:<n>`, `final:<dimension-key>`, `synthesis`, `final-fix`. Tests dispatch on these.
 - Tests are **behavioural**, asserting on the recorded dispatch sequence and the returned payload. Internal helper functions are never imported or called directly — they are not exported, and testing the contract rather than the internals is the intent.
-- Run tests with `node --test tests/workflows/`.
+- Run tests with `node --test 'tests/workflows/*.test.mjs'`.
 
 ---
 
@@ -67,7 +67,7 @@ test('skeleton loads and returns a structured payload', async () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd /Users/Dhananjay.Meena@gruve.ai/Developer/repo/dnjmn/dotfiles && node --test tests/workflows/`
+Run: `cd /Users/Dhananjay.Meena@gruve.ai/Developer/repo/dnjmn/dotfiles && node --test 'tests/workflows/*.test.mjs'`
 
 Expected: FAIL with `ERR_MODULE_NOT_FOUND` for `./harness.mjs`.
 
@@ -209,7 +209,7 @@ return { status: 'complete', ...state, finalReview: null }
 
 - [ ] **Step 5: Run test to verify it passes**
 
-Run: `cd /Users/Dhananjay.Meena@gruve.ai/Developer/repo/dnjmn/dotfiles && node --test tests/workflows/`
+Run: `cd /Users/Dhananjay.Meena@gruve.ai/Developer/repo/dnjmn/dotfiles && node --test 'tests/workflows/*.test.mjs'`
 
 Expected: PASS, `1 passing`.
 
@@ -355,7 +355,7 @@ import { runWorkflow, labels } from './harness.mjs'
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `cd /Users/Dhananjay.Meena@gruve.ai/Developer/repo/dnjmn/dotfiles && node --test tests/workflows/`
+Run: `cd /Users/Dhananjay.Meena@gruve.ai/Developer/repo/dnjmn/dotfiles && node --test 'tests/workflows/*.test.mjs'`
 
 Expected: FAIL — `calls[0]` is `undefined` because the skeleton dispatches nothing.
 
@@ -498,7 +498,7 @@ return { status: 'complete', ...state, finalReview: null }
 
 - [ ] **Step 5: Run tests to verify they pass**
 
-Run: `cd /Users/Dhananjay.Meena@gruve.ai/Developer/repo/dnjmn/dotfiles && node --test tests/workflows/`
+Run: `cd /Users/Dhananjay.Meena@gruve.ai/Developer/repo/dnjmn/dotfiles && node --test 'tests/workflows/*.test.mjs'`
 
 Expected: PASS, `9 passing`.
 
@@ -704,7 +704,7 @@ import { runWorkflow, labels, callsByLabel } from './harness.mjs'
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `cd /Users/Dhananjay.Meena@gruve.ai/Developer/repo/dnjmn/dotfiles && node --test tests/workflows/`
+Run: `cd /Users/Dhananjay.Meena@gruve.ai/Developer/repo/dnjmn/dotfiles && node --test 'tests/workflows/*.test.mjs'`
 
 Expected: FAIL — `labels(calls)` is `['preflight']`; no implementer is dispatched.
 
@@ -893,7 +893,7 @@ This stub is replaced wholesale in Task 4. It exists so the loop is testable now
 
 - [ ] **Step 6: Run tests to verify they pass**
 
-Run: `cd /Users/Dhananjay.Meena@gruve.ai/Developer/repo/dnjmn/dotfiles && node --test tests/workflows/`
+Run: `cd /Users/Dhananjay.Meena@gruve.ai/Developer/repo/dnjmn/dotfiles && node --test 'tests/workflows/*.test.mjs'`
 
 Expected: PASS, `18 passing`.
 
@@ -1086,7 +1086,7 @@ test('minor findings accumulate rather than being discarded', async () => {
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `cd /Users/Dhananjay.Meena@gruve.ai/Developer/repo/dnjmn/dotfiles && node --test tests/workflows/`
+Run: `cd /Users/Dhananjay.Meena@gruve.ai/Developer/repo/dnjmn/dotfiles && node --test 'tests/workflows/*.test.mjs'`
 
 Expected: FAIL — the stub reviewer's prompt has no `review-package` text and no fix agent is ever dispatched.
 
@@ -1407,7 +1407,7 @@ async function reviewTask(task, baseSha, implementer, preflight, state) {
 
 - [ ] **Step 6: Run tests to verify they pass**
 
-Run: `cd /Users/Dhananjay.Meena@gruve.ai/Developer/repo/dnjmn/dotfiles && node --test tests/workflows/`
+Run: `cd /Users/Dhananjay.Meena@gruve.ai/Developer/repo/dnjmn/dotfiles && node --test 'tests/workflows/*.test.mjs'`
 
 Expected: PASS, `27 passing`.
 
@@ -1566,7 +1566,7 @@ test('a dead dimension agent does not abort the final review', async () => {
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `cd /Users/Dhananjay.Meena@gruve.ai/Developer/repo/dnjmn/dotfiles && node --test tests/workflows/`
+Run: `cd /Users/Dhananjay.Meena@gruve.ai/Developer/repo/dnjmn/dotfiles && node --test 'tests/workflows/*.test.mjs'`
 
 Expected: FAIL — no `final:*` calls are dispatched.
 
@@ -1764,7 +1764,7 @@ Note the `fixPrompt` call passes a synthetic task object with `n: 'final'`, so i
 
 - [ ] **Step 5: Run tests to verify they pass**
 
-Run: `cd /Users/Dhananjay.Meena@gruve.ai/Developer/repo/dnjmn/dotfiles && node --test tests/workflows/`
+Run: `cd /Users/Dhananjay.Meena@gruve.ai/Developer/repo/dnjmn/dotfiles && node --test 'tests/workflows/*.test.mjs'`
 
 Expected: PASS, `33 passing`.
 
@@ -2115,7 +2115,7 @@ In `docs/superpowers/specs/2026-07-24-sdd-workflow-design.md`, replace the "Loca
 In `CLAUDE.md`, add `config/claude/workflows/` to the architecture notes with a one-line description, and add a line to the "When Editing" section:
 
 ```markdown
-- Workflow scripts: `node --test tests/workflows/` (logic is tested against mocked agents; no real agents are spent)
+- Workflow scripts: `node --test 'tests/workflows/*.test.mjs'` (logic is tested against mocked agents; no real agents are spent)
 ```
 
 - [ ] **Step 12: Clean up and commit**
