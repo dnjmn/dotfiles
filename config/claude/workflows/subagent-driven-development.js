@@ -360,6 +360,120 @@ ${context.globalConstraints || '(none stated)'}
 Then return: headSha (the 7-character short SHA of HEAD after your commits, from "git rev-parse --short HEAD"), fixesApplied, testsRun (the test files you actually ran), command (the exact command), and output (its real output). All five are required, and the re-review will not proceed without genuine test evidence.`
 }
 
+const DIMENSIONS = [
+  {
+    key: 'plan-alignment',
+    focus: `Does the implementation match the plan and requirements across the whole branch? Is all planned functionality present? Are deviations justified improvements or problematic departures? Do the tasks compose into one coherent change, or did later tasks undo or contradict earlier ones? If you find problems with the plan itself rather than the implementation, say so explicitly.`,
+  },
+  {
+    key: 'quality-architecture',
+    focus: `Are the design decisions sound? Judge separation of concerns, error handling, type safety where applicable, DRY without premature abstraction, and edge cases. Judge scalability and performance where they matter, security concerns, and whether the change integrates cleanly with the surrounding code. Look for duplication and drifting abstractions introduced across task boundaries, which per-task reviews structurally cannot see.`,
+  },
+  {
+    key: 'testing-production',
+    focus: `Do the tests verify real behaviour rather than mocks? Are edge cases covered, and are there integration tests where they matter? Then judge production readiness: migration strategy if a schema changed, backward compatibility, documentation completeness, and any obvious bug.`,
+  },
+]
+
+const DIMENSION_SCHEMA = {
+  type: 'object',
+  properties: {
+    findings: { type: 'array', items: FINDING_SCHEMA },
+    notes: { type: 'string' },
+  },
+  required: ['findings', 'notes'],
+}
+
+const SYNTHESIS_SCHEMA = {
+  type: 'object',
+  properties: {
+    readyToMerge: { type: 'string', enum: ['yes', 'no', 'with-fixes'] },
+    summary: { type: 'string' },
+    blocking: { type: 'array', items: FINDING_SCHEMA },
+    recommendations: { type: 'array', items: { type: 'string' } },
+    minorTriage: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          what: { type: 'string' },
+          decision: { type: 'string', enum: ['fix-before-merge', 'defer'] },
+          reason: { type: 'string' },
+        },
+        required: ['what', 'decision', 'reason'],
+      },
+    },
+  },
+  required: ['readyToMerge', 'summary', 'blocking', 'recommendations', 'minorTriage'],
+}
+
+function dimensionPrompt(dimension, mergeBase, head, context) {
+  return `You are a Senior Code Reviewer examining a completed feature branch before merge. You own one dimension of that review.
+
+## Your Dimension: ${dimension.key}
+
+${dimension.focus}
+
+Review only this dimension. Other reviewers are covering the others in parallel, and a synthesis step merges your reports.
+
+## What Was Built
+
+The branch implements the plan at ${context.planPath}. Read it for the requirements.
+
+Global constraints binding the whole branch:
+${context.globalConstraints || '(none stated)'}
+
+## Diff Under Review
+
+Run this, then read the file it names — it holds the commit list, the stat summary, and the full branch diff with context:
+
+  ${context.scriptsDir}/review-package ${mergeBase} ${head} .superpowers/sdd/review-final-${dimension.key}.diff
+
+Base: ${mergeBase}
+Head: ${head}
+
+Write to that exact path — each dimension has its own file so parallel reviewers never collide.
+
+## Read-Only Review
+
+Your review is read-only on this checkout. Do not mutate the working tree, the index, HEAD, or branch state. Use git show, git diff, and git log to inspect history. If you need a working copy of another revision, add a separate temporary worktree — never move HEAD on this checkout.
+
+## Calibration
+
+Categorize by actual severity. Not everything is Critical. Critical means bugs, security issues, data loss risks, or broken functionality. Important means architecture problems, missing features, poor error handling, or test gaps. Minor means style, optimization, or documentation polish.
+
+Each finding needs a file:line reference, what is wrong, why it matters, and how to fix it if that is not obvious. Do not say "looks good" without checking, do not mark nitpicks as Critical, and do not give feedback on code you did not actually read. Put anything worth saying that is not a finding in notes, including what was done well.`
+}
+
+function synthesisPrompt(reports, minorLedger, context) {
+  return `Three reviewers examined this feature branch in parallel, each on one dimension. Merge their reports into one verdict.
+
+## Dimension Reports
+
+${reports.map((report) => `### ${report.key}\n\nNotes: ${report.notes}\n\nFindings:\n${report.findings.length ? describeFindings(report.findings) : '(none)'}`).join('\n\n')}
+
+## Minor Findings Deferred From Per-Task Reviews
+
+These were raised during per-task reviews, judged Minor at the time, and deferred to you. Triage each one: does it need fixing before merge, or can it be deferred? A roll-up nobody reads is a silent discard, so give every entry a decision and a reason.
+
+${minorLedger.length ? minorLedger.map((entry) => `- Task ${entry.task}: ${entry.location} — ${entry.what} (${entry.why})`).join('\n') : '(none)'}
+
+## Requirements
+
+The branch implements the plan at ${context.planPath}.
+
+Global constraints binding the whole branch:
+${context.globalConstraints || '(none stated)'}
+
+## Your Job
+
+De-duplicate findings that several dimensions raised. Drop any finding another report's evidence refutes, and say so in your summary. Promote a Minor to blocking only if you can justify it. Return the blocking set — everything that must be fixed before merge — plus recommendations that are worth doing but not blocking, and your triage of every deferred minor finding.
+
+Give a clear verdict in readyToMerge: "yes", "no", or "with-fixes". Do not avoid the verdict.
+
+Your review is read-only. Do not modify the working tree, the index, HEAD, or branch state.`
+}
+
 function nextModel(model) {
   const index = MODEL_LADDER.indexOf(model)
   if (index === -1 || index === MODEL_LADDER.length - 1) return null
@@ -611,4 +725,66 @@ for (const task of pending) {
   state.base = outcome.head
 }
 
-return { status: 'complete', ...state, head: state.base, finalReview: null }
+phase('Final Review')
+
+const finalContext = {
+  planPath: args.planPath,
+  scriptsDir: preflight.scriptsDir,
+  globalConstraints: preflight.globalConstraints,
+}
+
+const dimensionReports = await parallel(
+  DIMENSIONS.map((dimension) => () =>
+    agent(dimensionPrompt(dimension, preflight.mergeBase, state.base, finalContext), {
+      label: `final:${dimension.key}`,
+      phase: 'Final Review',
+      model: 'opus',
+      effort: 'high',
+      schema: DIMENSION_SCHEMA,
+    }).then((report) => (report ? { key: dimension.key, ...report } : null)),
+  ),
+)
+
+const reports = dimensionReports.filter(Boolean)
+if (reports.length < DIMENSIONS.length) {
+  log(`${DIMENSIONS.length - reports.length} of ${DIMENSIONS.length} final review dimensions returned nothing; synthesising from the rest.`)
+}
+
+const synthesis = await agent(synthesisPrompt(reports, state.minorLedger, finalContext), {
+  label: 'synthesis',
+  phase: 'Final Review',
+  model: 'opus',
+  effort: 'high',
+  schema: SYNTHESIS_SCHEMA,
+})
+
+let finalFix = null
+if (synthesis && synthesis.blocking.length > 0) {
+  finalFix = await agent(
+    fixPrompt(
+      { n: 'final', title: 'whole-branch review findings' },
+      synthesis.blocking,
+      {
+        planPath: args.planPath,
+        scriptsDir: preflight.scriptsDir,
+        globalConstraints: preflight.globalConstraints,
+        reportPath: '.superpowers/sdd/final-review-report.md',
+        coveringTests: 'the test files covering each finding you fix',
+        evidenceGap: null,
+      },
+    ),
+    { label: 'final-fix', phase: 'Final Review', model: 'opus', effort: 'high', schema: FIX_SCHEMA },
+  )
+  if (finalFix) state.base = finalFix.headSha
+}
+
+return {
+  status: 'complete',
+  completed: state.completed,
+  ledgerLines: state.ledgerLines,
+  minorLedger: state.minorLedger,
+  base: state.base,
+  head: state.base,
+  finalReview: synthesis,
+  finalFix,
+}

@@ -443,3 +443,128 @@ test('minor findings accumulate rather than being discarded', async () => {
   assert.equal(result.minorLedger[0].task, 1)
   assert.equal(result.minorLedger[0].what, 'naming')
 })
+
+const SYNTH_OK = {
+  readyToMerge: 'yes',
+  summary: 'coherent branch',
+  blocking: [],
+  recommendations: [],
+  minorTriage: [],
+}
+
+test('the final review fans out across three dimensions in parallel on opus', async () => {
+  const { calls } = await runWorkflow(SDD_PATH, {
+    args: { planPath: 'plan.md' },
+    agent: scripted({
+      preflight: ONE_TASK,
+      'impl:1': DONE('bbbbbbb'),
+      'review:1': CLEAN_REVIEW,
+      'final:plan-alignment': { findings: [], notes: 'ok' },
+      'final:quality-architecture': { findings: [], notes: 'ok' },
+      'final:testing-production': { findings: [], notes: 'ok' },
+      synthesis: SYNTH_OK,
+    }),
+  })
+  const finals = calls.filter((call) => call.opts.label.startsWith('final:'))
+  assert.equal(finals.length, 3)
+  for (const call of finals) {
+    assert.equal(call.opts.model, 'opus')
+    assert.equal(call.opts.effort, 'high')
+    assert.equal(call.opts.phase, 'Final Review')
+  }
+})
+
+test('each dimension writes its own review package file so writes cannot race', async () => {
+  const { calls } = await runWorkflow(SDD_PATH, {
+    args: { planPath: 'plan.md' },
+    agent: scripted({
+      preflight: ONE_TASK,
+      'impl:1': DONE('bbbbbbb'),
+      'review:1': CLEAN_REVIEW,
+      'final:plan-alignment': { findings: [], notes: 'ok' },
+      'final:quality-architecture': { findings: [], notes: 'ok' },
+      'final:testing-production': { findings: [], notes: 'ok' },
+      synthesis: SYNTH_OK,
+    }),
+  })
+  const outfiles = calls
+    .filter((call) => call.opts.label.startsWith('final:'))
+    .map((call) => call.prompt.match(/review-final-[a-z-]+\.diff/)[0])
+  assert.equal(new Set(outfiles).size, 3)
+  for (const call of calls.filter((c) => c.opts.label.startsWith('final:'))) {
+    assert.match(call.prompt, /review-package 0000000 bbbbbbb/)
+  }
+})
+
+test('synthesis receives the accumulated minor ledger for triage', async () => {
+  const minor = [{ severity: 'Minor', location: 'src/a.ts:2', what: 'naming', why: 'clarity', fix: 'rename' }]
+  const { calls } = await runWorkflow(SDD_PATH, {
+    args: { planPath: 'plan.md' },
+    agent: scripted({
+      preflight: ONE_TASK,
+      'impl:1': DONE('bbbbbbb'),
+      'review:1': { ...CLEAN_REVIEW, minor },
+      'final:plan-alignment': { findings: [], notes: 'ok' },
+      'final:quality-architecture': { findings: [], notes: 'ok' },
+      'final:testing-production': { findings: [], notes: 'ok' },
+      synthesis: SYNTH_OK,
+    }),
+  })
+  assert.match(callsByLabel(calls, 'synthesis')[0].prompt, /naming/)
+})
+
+test('final findings go to exactly one fix agent', async () => {
+  const { calls, result } = await runWorkflow(SDD_PATH, {
+    args: { planPath: 'plan.md' },
+    agent: scripted({
+      preflight: ONE_TASK,
+      'impl:1': DONE('bbbbbbb'),
+      'review:1': CLEAN_REVIEW,
+      'final:plan-alignment': { findings: [], notes: 'ok' },
+      'final:quality-architecture': { findings: [], notes: 'ok' },
+      'final:testing-production': { findings: [], notes: 'ok' },
+      synthesis: { ...SYNTH_OK, readyToMerge: 'with-fixes', blocking: [FINDING(1), FINDING(2)] },
+      'final-fix': FIX_OK('eeeeeee'),
+    }),
+  })
+  assert.equal(callsByLabel(calls, 'final-fix').length, 1)
+  assert.match(callsByLabel(calls, 'final-fix')[0].prompt, /wrong 1/)
+  assert.match(callsByLabel(calls, 'final-fix')[0].prompt, /wrong 2/)
+  assert.equal(result.base, 'eeeeeee')
+})
+
+test('a clean synthesis dispatches no final fixer', async () => {
+  const { calls, result } = await runWorkflow(SDD_PATH, {
+    args: { planPath: 'plan.md' },
+    agent: scripted({
+      preflight: ONE_TASK,
+      'impl:1': DONE('bbbbbbb'),
+      'review:1': CLEAN_REVIEW,
+      'final:plan-alignment': { findings: [], notes: 'ok' },
+      'final:quality-architecture': { findings: [], notes: 'ok' },
+      'final:testing-production': { findings: [], notes: 'ok' },
+      synthesis: SYNTH_OK,
+    }),
+  })
+  assert.equal(callsByLabel(calls, 'final-fix').length, 0)
+  assert.equal(result.status, 'complete')
+  assert.equal(result.finalReview.readyToMerge, 'yes')
+  assert.deepEqual(result.completed, [1])
+  assert.equal(result.ledgerLines.length, 1)
+})
+
+test('a dead dimension agent does not abort the final review', async () => {
+  const { result } = await runWorkflow(SDD_PATH, {
+    args: { planPath: 'plan.md' },
+    agent: scripted({
+      preflight: ONE_TASK,
+      'impl:1': DONE('bbbbbbb'),
+      'review:1': CLEAN_REVIEW,
+      'final:plan-alignment': null,
+      'final:quality-architecture': { findings: [], notes: 'ok' },
+      'final:testing-production': { findings: [], notes: 'ok' },
+      synthesis: SYNTH_OK,
+    }),
+  })
+  assert.equal(result.status, 'complete')
+})
