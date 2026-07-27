@@ -94,6 +94,78 @@ ${input.specPath ? `Design spec for cross-checking: ${input.specPath}` : ''}
 Your review is read-only. Do not modify the working tree, the index, HEAD, or branch state.`
 }
 
+const IMPLEMENTER_SCHEMA = {
+  type: 'object',
+  properties: {
+    status: { type: 'string', enum: ['DONE', 'DONE_WITH_CONCERNS', 'BLOCKED', 'NEEDS_CONTEXT'] },
+    headSha: { type: 'string' },
+    commits: { type: 'array', items: { type: 'string' } },
+    testSummary: { type: 'string' },
+    concerns: { type: 'array', items: { type: 'string' } },
+    interfaces: { type: 'string' },
+    reportPath: { type: 'string' },
+  },
+  required: ['status', 'headSha', 'commits', 'testSummary', 'concerns', 'interfaces', 'reportPath'],
+}
+
+function implementerPrompt(task, context) {
+  return `You are implementing Task ${task.n}: ${task.title}
+
+## Task Description
+
+Run this first, then read the file it names — it is your requirements, and you must use its exact values verbatim:
+
+  ${context.scriptsDir}/task-brief ${context.planPath} ${task.n}
+
+## Context
+
+This is task ${task.n} of ${context.totalTasks} in an implementation plan being executed one task at a time.
+
+Global constraints binding every task:
+${context.globalConstraints || '(none stated)'}
+${context.interfaces ? `\nInterfaces produced by earlier tasks that your brief cannot know:\n${context.interfaces}` : ''}
+${context.escalation ? `\nA previous attempt at this task reported BLOCKED with: ${context.escalation}. You are the escalated retry — approach it differently.` : ''}
+
+## Your Job
+
+1. Implement exactly what the brief specifies — nothing more, nothing less
+2. Write tests, following TDD if the brief says to
+3. Verify the implementation works
+4. Commit your work
+5. Self-review, then report
+
+While iterating, run the focused test for what you are changing. Run the full suite once before committing, not after every edit.
+
+## Code Organization
+
+Follow the file structure the brief defines. Each file should have one clear responsibility with a well-defined interface. If a file you are creating grows beyond the brief's intent, stop and report DONE_WITH_CONCERNS rather than splitting it yourself. In an existing codebase, follow established patterns and improve code you touch the way a good developer would, without restructuring anything outside your task.
+
+## When You Are in Over Your Head
+
+It is always OK to stop and say this is too hard. Bad work is worse than no work, and you will not be penalized for escalating. Stop and escalate when the task needs architectural decisions with several valid answers, when you cannot find clarity after reading file after file, or when you are simply unsure your approach is right.
+
+There is no interactive channel here: you cannot ask a question and wait. If you need information you were not given, report NEEDS_CONTEXT with your exact questions in "concerns" and stop. If you are stuck for any other reason, report BLOCKED with what you tried in "concerns".
+
+## Before Reporting: Self-Review
+
+Review your work with fresh eyes. Did you implement every requirement, and no requirement you were not given? Are names accurate? Did you avoid overbuilding? Do the tests verify real behaviour rather than mocks, and is the test output pristine, with no stray warnings? Fix anything you find before reporting.
+
+## Report
+
+Write your full report to ${context.reportPath}: what you implemented, what you tested and the results, TDD evidence (the RED command and failing output, then the GREEN command and passing output) if the brief required TDD, files changed, self-review findings, and any concerns.
+
+Then return:
+- status: DONE, DONE_WITH_CONCERNS, BLOCKED, or NEEDS_CONTEXT
+- headSha: the 7-character short SHA of HEAD after your commits — run "git rev-parse --short HEAD". If you made no commits, return the SHA you started from.
+- commits: each commit you created, as "shortsha subject"
+- testSummary: one line, for example "14/14 passing, output pristine"
+- concerns: your concerns, or your exact questions if NEEDS_CONTEXT, or what blocked you if BLOCKED
+- interfaces: the exact signatures and names later tasks will consume from your work, at most 10 lines. Later implementers see only this — not your report.
+- reportPath: ${context.reportPath}
+
+Use DONE_WITH_CONCERNS if you completed the work but have doubts about correctness. Never silently produce work you are unsure about.`
+}
+
 function nextModel(model) {
   const index = MODEL_LADDER.indexOf(model)
   if (index === -1 || index === MODEL_LADDER.length - 1) return null
@@ -120,6 +192,15 @@ const state = {
   ledgerLines: [],
   minorLedger: [],
   base: null,
+}
+
+async function reviewTask(task, baseSha, implementer, preflight, state) {
+  const review = await agent(
+    `Review task ${task.n} over ${baseSha}..${implementer.headSha}. Implementer concerns: ${implementer.concerns.join('; ') || 'none'}.`,
+    { label: `review:${task.n}`, phase: 'Tasks', model: task.reviewerModel, schema: null },
+  )
+  if (!review) return { gate: gate('reviewer_failed', { task: task.n }, state) }
+  return { head: implementer.headSha }
 }
 
 phase('Preflight')
@@ -165,4 +246,80 @@ if (preflight.completedTasks.length > 0) {
 
 phase('Tasks')
 
-return { status: 'complete', ...state, finalReview: null }
+const interfaces = []
+
+for (const task of pending) {
+  const baseSha = state.base
+  const context = {
+    planPath: args.planPath,
+    scriptsDir: preflight.scriptsDir,
+    globalConstraints: preflight.globalConstraints,
+    totalTasks: preflight.tasks.length,
+    interfaces: interfaces.join('\n'),
+    reportPath: `.superpowers/sdd/task-${task.n}-report.md`,
+    escalation: null,
+  }
+
+  let model = task.implementerModel
+  let effort = task.implementerEffort
+  let implementer = await agent(implementerPrompt(task, context), {
+    label: `impl:${task.n}`,
+    phase: 'Tasks',
+    model,
+    effort,
+    schema: IMPLEMENTER_SCHEMA,
+  })
+
+  if (implementer && implementer.status === 'BLOCKED') {
+    const escalated = nextModel(model)
+    if (escalated) {
+      log(`Task ${task.n} reported BLOCKED on ${model}; escalating to ${escalated}.`)
+      model = escalated
+      effort = 'high'
+      implementer = await agent(
+        implementerPrompt(task, { ...context, escalation: implementer.concerns.join('; ') }),
+        { label: `impl:${task.n}`, phase: 'Tasks', model, effort, schema: IMPLEMENTER_SCHEMA },
+      )
+    }
+  }
+
+  if (!implementer) {
+    return gate('implementer_failed', { task: task.n, message: `The implementer for task ${task.n} returned no result.` }, state)
+  }
+
+  if (implementer.status === 'NEEDS_CONTEXT') {
+    return gate('needs_context', {
+      task: task.n,
+      questions: implementer.concerns,
+      message: `Task ${task.n} needs information the plan did not provide. Answer, then resume with the answers appended to args.decisions.`,
+    }, state)
+  }
+
+  if (implementer.status === 'BLOCKED') {
+    return gate('blocked', {
+      task: task.n,
+      model,
+      reasons: implementer.concerns,
+      message: `Task ${task.n} is blocked at model ${model}. Break the task down, fix the plan, or provide context.`,
+    }, state)
+  }
+
+  if (implementer.headSha === baseSha) {
+    return gate('no_commits', {
+      task: task.n,
+      message: `Task ${task.n} reported ${implementer.status} but HEAD did not move from ${baseSha}. Nothing was committed.`,
+    }, state)
+  }
+
+  const outcome = await reviewTask(task, baseSha, implementer, preflight, state)
+  if (outcome.gate) return outcome.gate
+
+  if (implementer.interfaces) {
+    interfaces.push(`Task ${task.n} (${task.title}): ${implementer.interfaces}`)
+  }
+  state.completed.push(task.n)
+  state.ledgerLines.push(`Task ${task.n}: complete (commits ${baseSha}..${outcome.head}, review clean)`)
+  state.base = outcome.head
+}
+
+return { status: 'complete', ...state, head: state.base, finalReview: null }

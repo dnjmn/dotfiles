@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { fileURLToPath } from 'node:url'
-import { runWorkflow, labels } from './harness.mjs'
+import { runWorkflow, labels, callsByLabel } from './harness.mjs'
 
 export const SDD_PATH = fileURLToPath(
   new URL('../../config/claude/workflows/subagent-driven-development.js', import.meta.url),
@@ -117,4 +117,170 @@ test('a plan above the size threshold logs a warning', async () => {
         : null,
   })
   assert.ok(logs.some((line) => /6 tasks/.test(line)))
+})
+
+const DONE = (headSha) => ({
+  status: 'DONE',
+  headSha,
+  commits: [`${headSha} feat: work`],
+  testSummary: '3/3 passing, output pristine',
+  concerns: [],
+  interfaces: 'exports doThing(x: string): number',
+  reportPath: '/w/task-report.md',
+})
+
+const CLEAN_REVIEW = {
+  specVerdict: 'pass',
+  specIssues: [],
+  cannotVerify: [],
+  strengths: 'tidy',
+  critical: [],
+  important: [],
+  minor: [],
+  planMandated: [],
+  qualityVerdict: 'approved',
+}
+
+function scripted(handlers) {
+  return (call) => {
+    const handler = handlers[call.opts.label]
+    if (typeof handler === 'function') return handler(call)
+    if (handler === undefined) return null
+    return handler
+  }
+}
+
+test('tasks run sequentially with per-task models from preflight', async () => {
+  const { calls } = await runWorkflow(SDD_PATH, {
+    args: { planPath: 'plan.md' },
+    agent: scripted({
+      preflight: PREFLIGHT_OK,
+      'impl:1': DONE('bbbbbbb'),
+      'impl:2': DONE('ccccccc'),
+      'review:1': CLEAN_REVIEW,
+      'review:2': CLEAN_REVIEW,
+    }),
+  })
+  const taskPhase = labels(calls).filter((label) => !label.startsWith('final') && label !== 'synthesis')
+  assert.deepEqual(taskPhase, ['preflight', 'impl:1', 'review:1', 'impl:2', 'review:2'])
+  assert.equal(callsByLabel(calls, 'impl:1')[0].opts.model, 'haiku')
+  assert.equal(callsByLabel(calls, 'impl:1')[0].opts.effort, 'low')
+  assert.equal(callsByLabel(calls, 'impl:2')[0].opts.model, 'sonnet')
+  assert.equal(callsByLabel(calls, 'impl:1')[0].opts.phase, 'Tasks')
+})
+
+test('BASE advances by reported head sha and never uses HEAD~1', async () => {
+  const { calls, result } = await runWorkflow(SDD_PATH, {
+    args: { planPath: 'plan.md' },
+    agent: scripted({
+      preflight: PREFLIGHT_OK,
+      'impl:1': DONE('bbbbbbb'),
+      'impl:2': DONE('ccccccc'),
+      'review:1': CLEAN_REVIEW,
+      'review:2': CLEAN_REVIEW,
+    }),
+  })
+  assert.match(callsByLabel(calls, 'review:1')[0].prompt, /aaaaaaa\.\.bbbbbbb/)
+  assert.match(callsByLabel(calls, 'review:2')[0].prompt, /bbbbbbb\.\.ccccccc/)
+  for (const call of calls) assert.doesNotMatch(call.prompt, /HEAD~1/)
+  assert.equal(result.head, 'ccccccc')
+})
+
+test('the implementer prompt carries the brief command and prior interfaces only', async () => {
+  const { calls } = await runWorkflow(SDD_PATH, {
+    args: { planPath: 'plan.md' },
+    agent: scripted({
+      preflight: PREFLIGHT_OK,
+      'impl:1': DONE('bbbbbbb'),
+      'impl:2': DONE('ccccccc'),
+      'review:1': CLEAN_REVIEW,
+      'review:2': CLEAN_REVIEW,
+    }),
+  })
+  const first = callsByLabel(calls, 'impl:1')[0].prompt
+  const second = callsByLabel(calls, 'impl:2')[0].prompt
+  assert.match(first, /task-brief.*plan\.md 1/)
+  assert.match(first, /Timeout is exactly 30s\./)
+  assert.match(second, /exports doThing\(x: string\): number/)
+  assert.doesNotMatch(second, /3\/3 passing/)
+})
+
+test('BLOCKED escalates one model tier exactly once', async () => {
+  let attempts = 0
+  const { calls, result } = await runWorkflow(SDD_PATH, {
+    args: { planPath: 'plan.md' },
+    agent: scripted({
+      preflight: { ...PREFLIGHT_OK, tasks: [PREFLIGHT_OK.tasks[0]] },
+      'impl:1': () => {
+        attempts += 1
+        return { ...DONE('bbbbbbb'), status: 'BLOCKED', concerns: ['cannot infer schema'] }
+      },
+    }),
+  })
+  assert.equal(attempts, 2)
+  assert.equal(callsByLabel(calls, 'impl:1')[0].opts.model, 'haiku')
+  assert.equal(callsByLabel(calls, 'impl:1')[1].opts.model, 'sonnet')
+  assert.equal(result.needsDecision.kind, 'blocked')
+})
+
+test('a task already at opus does not self-retry when BLOCKED', async () => {
+  const opusTask = { ...PREFLIGHT_OK.tasks[0], implementerModel: 'opus', implementerEffort: 'high' }
+  const { calls, result } = await runWorkflow(SDD_PATH, {
+    args: { planPath: 'plan.md' },
+    agent: scripted({
+      preflight: { ...PREFLIGHT_OK, tasks: [opusTask] },
+      'impl:1': { ...DONE('bbbbbbb'), status: 'BLOCKED' },
+    }),
+  })
+  assert.equal(callsByLabel(calls, 'impl:1').length, 1)
+  assert.equal(result.needsDecision.kind, 'blocked')
+})
+
+test('NEEDS_CONTEXT gates immediately without escalating', async () => {
+  const { calls, result } = await runWorkflow(SDD_PATH, {
+    args: { planPath: 'plan.md' },
+    agent: scripted({
+      preflight: { ...PREFLIGHT_OK, tasks: [PREFLIGHT_OK.tasks[0]] },
+      'impl:1': { ...DONE('bbbbbbb'), status: 'NEEDS_CONTEXT', concerns: ['which port?'] },
+    }),
+  })
+  assert.equal(callsByLabel(calls, 'impl:1').length, 1)
+  assert.equal(result.needsDecision.kind, 'needs_context')
+  assert.deepEqual(result.needsDecision.questions, ['which port?'])
+})
+
+test('an unchanged head sha is treated as failure, not success', async () => {
+  const { result } = await runWorkflow(SDD_PATH, {
+    args: { planPath: 'plan.md' },
+    agent: scripted({
+      preflight: { ...PREFLIGHT_OK, tasks: [PREFLIGHT_OK.tasks[0]] },
+      'impl:1': DONE('aaaaaaa'),
+    }),
+  })
+  assert.equal(result.needsDecision.kind, 'no_commits')
+})
+
+test('DONE_WITH_CONCERNS proceeds to review with the concerns injected', async () => {
+  const { calls } = await runWorkflow(SDD_PATH, {
+    args: { planPath: 'plan.md' },
+    agent: scripted({
+      preflight: { ...PREFLIGHT_OK, tasks: [PREFLIGHT_OK.tasks[0]] },
+      'impl:1': { ...DONE('bbbbbbb'), status: 'DONE_WITH_CONCERNS', concerns: ['retry loop may spin'] },
+      'review:1': CLEAN_REVIEW,
+    }),
+  })
+  assert.match(callsByLabel(calls, 'review:1')[0].prompt, /retry loop may spin/)
+})
+
+test('a completed task appends a ledger line', async () => {
+  const { result } = await runWorkflow(SDD_PATH, {
+    args: { planPath: 'plan.md' },
+    agent: scripted({
+      preflight: { ...PREFLIGHT_OK, tasks: [PREFLIGHT_OK.tasks[0]] },
+      'impl:1': DONE('bbbbbbb'),
+      'review:1': CLEAN_REVIEW,
+    }),
+  })
+  assert.deepEqual(result.completed, [1])
+  assert.deepEqual(result.ledgerLines, ['Task 1: complete (commits aaaaaaa..bbbbbbb, review clean)'])
 })
