@@ -104,6 +104,33 @@ lacks "old window-nav bind gone" "select-window"        "$(tm list-keys -T prefi
   && ok "neovim navigator spec exists" \
   || bad "neovim navigator spec exists" "config/neovim/lua/plugins/tmux.lua" "missing"
 
+echo "== popups, options, descriptions =="
+contains "lazygit popup"    "lazygit"       "$(tm list-keys -T prefix g 2>/dev/null)"
+contains "fzf session popup" "fzf"          "$(tm list-keys -T prefix s 2>/dev/null)"
+contains "scratch popup"    "display-popup" "$(tm list-keys -T prefix C-t 2>/dev/null)"
+contains "clipboard on"          "set-clipboard on"      "$(tm show-options -g set-clipboard)"
+contains "detach-on-destroy off" "detach-on-destroy off" "$(tm show-options -g detach-on-destroy)"
+contains "default-terminal is a server option" "tmux-256color" "$(tm show-options -s default-terminal)"
+contains "undercurl capability" "Smulx"       "$(tm show-options -g terminal-overrides)"
+
+# Assert OUR bindings carry a -N description. Do not compare per-table totals:
+# tmux ships 19 undescribed root bindings (mouse) and ~87 undescribed copy-mode-vi
+# bindings, so `total == described` is unsatisfiable and annotating them is out of
+# scope. `list-keys -T <table> -N <key>` prints the note, or "unknown key: <key>"
+# when the key has none — that distinction is the test.
+described() { # described <table> <key>
+  out="$(tm list-keys -T "$1" -N "$2" 2>&1)"
+  case "$out" in
+    *"unknown key"*) bad "described: $1 $2" "a -N note" "$out" ;;
+    *)               ok "described: $1 $2" ;;
+  esac
+}
+for k in r '|' - c N P h j k l H J K L o T b Enter n p C-l g s C-t; do
+  described prefix "$k"
+done
+for k in C-h C-j C-k C-l;  do described root "$k"; done
+for k in v y C-v;           do described copy-mode-vi "$k"; done
+
 echo
 echo "passed: $PASS   failed: $FAIL"
 [[ $FAIL -eq 0 ]]
