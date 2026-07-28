@@ -77,6 +77,17 @@ contains "status-keys absorbed"       "status-keys emacs"    "$(tm show-options 
 contains "aggressive-resize absorbed" "aggressive-resize on" "$(tm show-options -gw aggressive-resize)"
 contains "continuum save interval 15" "save-interval 15"     "$(tm show-options -g @continuum-save-interval)"
 
+echo "== status bar =="
+SR="$(tm show-options -g status-right)"
+contains "status-interval is 5" "status-interval 5" "$(tm show-options -g status-interval)"
+conf_lacks "status-interval not duplicated in tmux.conf" "status-interval" "$REPO_ROOT/config/tmux/tmux.conf"
+lacks "no docker segment"   "docker"          "$SR"
+lacks "no k8s segment"      "kubectl"         "$SR"
+lacks "no cpu segment"      "top -l"          "$SR"
+lacks "no memory segment"   "memory_pressure" "$SR"
+contains "single git call"  "porcelain=v2"    "$SR"
+lacks "no cd subshell"      "cd #{pane_current_path}" "$SR"
+
 echo
 echo "passed: $PASS   failed: $FAIL"
 [[ $FAIL -eq 0 ]]
