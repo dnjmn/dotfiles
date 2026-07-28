@@ -426,7 +426,10 @@ Append to `tests/tmux/verify.sh` before the summary lines:
 
 ```bash
 echo "== navigation =="
-contains "root C-h is vim-aware" "pane_current_command" "$(tm list-keys -T root C-h 2>/dev/null)"
+contains "root C-h is vim-aware" "@is_vim" "$(tm list-keys -T root C-h 2>/dev/null)"
+contains "vim matcher defined once" "pane_current_command" "$(tm show-options -gv @is_vim 2>/dev/null)"
+# The matcher must evaluate to 0 in this shell pane; 1 would mean it matches everything.
+contains "vim matcher evaluates" "0" "$(tm display -p -t verify '#{E:#{@is_vim}}' 2>/dev/null)"
 contains "root C-j bound"        "select-pane -D"       "$(tm list-keys -T root C-j 2>/dev/null)"
 contains "root C-k bound"        "select-pane -U"       "$(tm list-keys -T root C-k 2>/dev/null)"
 contains "root C-l bound"        "select-pane -R"       "$(tm list-keys -T root C-l 2>/dev/null)"
@@ -463,13 +466,13 @@ bind -N "next window"     -r n next-window
 bind -N "previous window" -r p previous-window
 
 # Vim-aware pane navigation. The match runs inside tmux's format engine, so unlike
-# the canonical `ps | grep` snippet this forks nothing per keypress. The pattern is
-# repeated rather than factored into a user option because #{@var} does not
-# recursively evaluate the format it contains.
-bind -N "pane left (vim-aware)"  -n C-h if -F '#{m/ri:^(g?(view|l?n?vim?x?)(diff)?|fzf|lazygit)$,#{pane_current_command}}' 'send-keys C-h' 'select-pane -L'
-bind -N "pane down (vim-aware)"  -n C-j if -F '#{m/ri:^(g?(view|l?n?vim?x?)(diff)?|fzf|lazygit)$,#{pane_current_command}}' 'send-keys C-j' 'select-pane -D'
-bind -N "pane up (vim-aware)"    -n C-k if -F '#{m/ri:^(g?(view|l?n?vim?x?)(diff)?|fzf|lazygit)$,#{pane_current_command}}' 'send-keys C-k' 'select-pane -U'
-bind -N "pane right (vim-aware)" -n C-l if -F '#{m/ri:^(g?(view|l?n?vim?x?)(diff)?|fzf|lazygit)$,#{pane_current_command}}' 'send-keys C-l' 'select-pane -R'
+# the canonical `ps | grep` snippet this forks nothing per keypress. `#{E:...}`
+# expands the stored format a second time, so the pattern is defined once.
+set -g @is_vim "#{m/ri:^(g?(view|l?n?vim?x?)(diff)?|fzf|lazygit)$,#{pane_current_command}}"
+bind -N "pane left (vim-aware)"  -n C-h if -F "#{E:#{@is_vim}}" 'send-keys C-h' 'select-pane -L'
+bind -N "pane down (vim-aware)"  -n C-j if -F "#{E:#{@is_vim}}" 'send-keys C-j' 'select-pane -D'
+bind -N "pane up (vim-aware)"    -n C-k if -F "#{E:#{@is_vim}}" 'send-keys C-k' 'select-pane -U'
+bind -N "pane right (vim-aware)" -n C-l if -F "#{E:#{@is_vim}}" 'send-keys C-l' 'select-pane -R'
 
 # Root-table C-l now steers panes, so shell clear-screen moves under the prefix.
 bind -N "clear screen" C-l send-keys 'C-l'
