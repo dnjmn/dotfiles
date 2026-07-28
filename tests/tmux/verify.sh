@@ -88,6 +88,22 @@ lacks "no memory segment"   "memory_pressure" "$SR"
 contains "single git call"  "porcelain=v2"    "$SR"
 lacks "no cd subshell"      "cd #{pane_current_path}" "$SR"
 
+echo "== navigation =="
+contains "root C-h is vim-aware" "@is_vim" "$(tm list-keys -T root C-h 2>/dev/null)"
+contains "vim matcher defined once" "pane_current_command" "$(tm show-options -gv @is_vim 2>/dev/null)"
+# The matcher must evaluate to 0 in this shell pane; 1 would mean it matches everything.
+contains "vim matcher evaluates" "0" "$(tm display -p -t verify '#{E:#{@is_vim}}' 2>/dev/null)"
+contains "root C-j bound"        "select-pane -D"       "$(tm list-keys -T root C-j 2>/dev/null)"
+contains "root C-k bound"        "select-pane -U"       "$(tm list-keys -T root C-k 2>/dev/null)"
+contains "root C-l bound"        "select-pane -R"       "$(tm list-keys -T root C-l 2>/dev/null)"
+contains "prefix C-l clears shell" "send-keys"          "$(tm list-keys -T prefix C-l 2>/dev/null)"
+contains "prefix n repeats"      "-r"                   "$(tm list-keys -T prefix n 2>/dev/null)"
+contains "prefix p repeats"      "-r"                   "$(tm list-keys -T prefix p 2>/dev/null)"
+lacks "old window-nav bind gone" "select-window"        "$(tm list-keys -T prefix C-h 2>/dev/null)"
+[[ -f "$REPO_ROOT/config/neovim/lua/plugins/tmux.lua" ]] \
+  && ok "neovim navigator spec exists" \
+  || bad "neovim navigator spec exists" "config/neovim/lua/plugins/tmux.lua" "missing"
+
 echo
 echo "passed: $PASS   failed: $FAIL"
 [[ $FAIL -eq 0 ]]
