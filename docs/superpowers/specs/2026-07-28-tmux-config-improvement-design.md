@@ -1,4 +1,4 @@
-# Tmux Config: Cost Reduction and 3.6 Ergonomics
+# Tmux Config: Environment Correctness, Cost Reduction, 3.6 Ergonomics
 
 **Date:** 2026-07-28
 **Status:** Design approved, pending implementation plan
@@ -7,8 +7,9 @@
 
 ## Problem
 
-The config works, but three things are measurably wrong on this machine
-(tmux 3.6a, macOS arm64, kitty):
+The config works, but four things are measurably wrong on this machine
+(tmux 3.6a, macOS arm64, kitty). Item 4 is the user-reported bug; items 1-3
+were found while investigating it.
 
 **1. The status bar burns CPU continuously.** `statusline.conf:22` sets
 `status-interval 2`, silently overriding `tmux.conf:47`. Each refresh forks ~23
@@ -40,6 +41,45 @@ against tmux's compiled-in default (`sensible.tmux:82-112`). It runs from
 sets all four explicitly anyway, so the plugin's arbitration is invisible
 coupling with no benefit.
 
+**4. New panes in long-lived sessions get stale environment variables.**
+Reported symptom: editing `.zshenv` does not affect new panes in resurrected
+sessions. Root cause established by reproduction (see below), not inspection.
+
+New panes *do* re-source `.zshenv`. The failure is that `.zshenv:6-9` uses the
+`${VAR:-default}` idiom, which by design yields to an inherited value — and
+tmux hands down a copy of the environment frozen when the *server* started.
+Reproduction on a scratch socket, server started holding `XDG_DATA_HOME=STALE_OLD`
+and `.zshenv` then edited:
+
+| variable | form | result |
+|---|---|---|
+| `XDG_DATA_HOME` | `${VAR:-default}` | `STALE_OLD` — stale |
+| `DERIVED` | unconditional, derived from XDG | `STALE_OLD/oh-my-zsh` — poisoned |
+| `UNCONDITIONAL` | plain export | updated correctly |
+| `NEWVAR` | newly added | appeared correctly |
+
+This is why the bug looks inconsistent: plain exports (`EDITOR`, `GOPATH`,
+`CLAUDE_CODE_SUBAGENT_MODEL`) update fine, while the four XDG vars and roughly
+fifteen values computed from them (`HISTFILE:13`, `ZSH:20`, `ZSH_CUSTOM:26`,
+`NPM_CONFIG_*:30-31`, `AWS_*:40-41`, `SECRETS:84`, the Homebrew branch at `:57`)
+silently do not.
+
+Two findings fell out of the investigation:
+
+- **`ZDOTDIR` cannot be repaired from the shell side.** zsh reads
+  `$ZDOTDIR/.zshenv` *instead of* `~/.zshenv` when `ZDOTDIR` is already set, so
+  a stale value means the file that would fix it never loads. Reproduced: stale
+  `ZDOTDIR` yielded `BOOTSTRAPPED=<EMPTY>`, i.e. no config at all.
+- **`tmux.conf:14` silently dropped nine defaults.** `set -g update-environment`
+  *replaces* the list rather than extending it, discarding `SSH_AUTH_SOCK`,
+  `SSH_AGENT_PID`, `SSH_CONNECTION`, `DISPLAY` and five more. Since the git
+  remote is `git@github.com:` and macOS assigns ssh-agent a new socket path per
+  login, reattaching an old session after a reboot leaves `SSH_AUTH_SOCK`
+  pointing at a dead socket and `git push` fails with a publickey error.
+
+`update-environment` was also the wrong tool for the reported symptom: it fires
+only on client **attach**, never on pane creation.
+
 Separately, the setup misses ergonomics that tmux 3.2+ makes cheap: no popups,
 no fuzzy session switching despite `fzf` being installed, no seamless
 nvim-to-tmux pane navigation despite nvim being the editor, no key
@@ -69,8 +109,9 @@ set -g status-keys emacs
 setw -g aggressive-resize on
 ```
 
-Its remaining contributions are already bound in the file: prefix passthrough
-(`tmux.conf:64`), reload (`:67`), window nav (`:97-98`).
+Its remaining contributions are already covered: prefix passthrough
+(`tmux.conf:64`) and reload (`:67`) are bound in the file, and its `C-p`/`C-n`
+window nav is superseded by the `bind -r n`/`p` introduced below.
 
 **What would change this answer:** if a future tmux release adds several new
 sensible defaults worth tracking upstream, re-adopting the plugin becomes
@@ -125,6 +166,64 @@ Two consequences, both handled:
 `prefix + h/j/k/l` is kept as a fallback for when a full-screen TUI captures
 `C-hjkl`.
 
+### Stop tmux propagating static config vars; fix it in tmux, not in `.zshenv`
+
+The five static config variables are removed from tmux's inheritance so every
+new pane re-derives them:
+
+```tmux
+set-environment -gr ZDOTDIR
+set-environment -gr XDG_CONFIG_HOME
+set-environment -gr XDG_DATA_HOME
+set-environment -gr XDG_CACHE_HOME
+set-environment -gr XDG_STATE_HOME
+```
+
+`-r` marks a variable for removal from the environment before a new process
+starts. Verified: with tmux's env still holding `STALE_OLD`, a new pane resolved
+`DEFAULT_FRESH`, derived variables followed, and a brand-new session inherited
+the behaviour. For `ZDOTDIR` specifically, removal makes zsh fall back to
+`~/.zshenv`, which sets `ZDOTDIR` unconditionally (`~/.zshenv:6`) and re-sources
+the real config — self-healing on every pane.
+
+Rejected alternative: make `.zshenv:6-9` unconditional exports. Also verified
+working, but it cannot fix `ZDOTDIR` (chicken-and-egg), it costs XDG-spec
+compliance and portability to systems that legitimately set these, and it leaves
+the actual mechanism — tmux propagating a frozen copy of static config — in
+place. The `:-` guards are correct code being fed a stale value; the value is
+the defect, not the guard.
+
+Rejected alternative: force each new pane to source `~/.zshenv`, e.g. via
+`set -g default-command 'source ~/.zshenv; exec zsh'`. This does not work.
+`$ZDOTDIR/.zshenv` is already sourced by every new pane — verified, since newly
+added and unconditional variables do update — and re-sourcing cannot overcome a
+stale value, because `${VAR:-default}` substitutes only when `VAR` is unset.
+Measured with `XDG_DATA_HOME=STALE` present: sourcing once, twice and three
+times all yield `STALE`; removing the variable first yields `FRESH_DEFAULT`.
+The approach also adds a shell layer and interferes with tmux-resurrect's
+restored pane commands.
+
+The valid part of that idea is delivered by the chosen fix. zsh reads
+`$ZDOTDIR/.zshenv` *instead of* `~/.zshenv`, so the bootstrap file never runs
+inside tmux today (verified both ways). Removing `ZDOTDIR` restores it, giving
+a full re-bootstrap per pane — by removal rather than by adding a source
+command.
+
+Scope confirmed with the user: only newly created panes need correct values.
+Already-running panes keep what they have, which is inherent — a running
+process's environment cannot be changed externally.
+
+Consequence accepted: a pane tmux starts directly as a non-shell process (for
+example tmux-resurrect restoring straight into `nvim`) receives no XDG vars.
+Harmless here because all four values equal the XDG spec defaults, so a program
+falling back to its own default resolves the same path.
+
+`tmux.conf:14` is deleted, restoring tmux's nine `update-environment` defaults —
+the per-client variables the option exists for.
+
+**What would change this answer:** if XDG values ever diverge from the spec
+defaults, non-shell panes would need `default-command` or an explicit wrapper.
+
 ### Persistence tuning
 
 `@continuum-save-interval` returns to `15`, the upstream default. Note this
@@ -140,15 +239,17 @@ Keep unchanged: `history-limit`, `display-time`, `focus-events`, `escape-time`.
 These stay exactly as written; dropping `tmux-sensible` is what makes them
 authoritative rather than contested.
 
-Remove: `status-interval` at `:47` (single home for the fact is
+Remove: `update-environment` override at `:14` (restores tmux's nine defaults,
+fixing `SSH_AUTH_SOCK`); `status-interval` at `:47` (single home for the fact is
 `statusline.conf`); `@plugin tmux-copycat`; `@plugin tmux-sensible`;
 `@yank_selection 'primary'`; window-nav binds at `:97-98`.
 
-Add: `status-keys emacs`, `aggressive-resize on`, `set-clipboard on` (OSC-52
-copy over SSH), `detach-on-destroy off` (killing a session's last window lands
-in another session instead of ejecting to the shell), undercurl
-`terminal-overrides` so nvim LSP diagnostics render in kitty, root-table
-`C-hjkl` navigation, `prefix + C-l` shell-clear, `bind -r n`/`p`.
+Add: the five `set-environment -gr` lines, `status-keys emacs`,
+`aggressive-resize on`, `set-clipboard on` (OSC-52 copy over SSH),
+`detach-on-destroy off` (killing a session's last window lands in another
+session instead of ejecting to the shell), undercurl `terminal-overrides` so
+nvim LSP diagnostics render in kitty, root-table `C-hjkl` navigation,
+`prefix + C-l` shell-clear, `bind -r n`/`p`.
 
 Change: `default-terminal` from `set -g` to `set -s` — it has been a server
 option since 3.2; `show-options -s` confirms it currently lands there anyway.
@@ -201,3 +302,18 @@ Keybinding tables and plugin list updated to match.
    `prefix + s` fuzzy-switches sessions.
 6. Confirm the status bar renders branch, dirty marker, battery and clock with
    correct gruvbox separators.
+7. Environment fix, against a **long-lived** session (not a fresh server, which
+   would mask the bug):
+   - `tmux show-environment -g | grep -E '^-?(ZDOTDIR|XDG_)'` shows each of the
+     five prefixed with `-`, marking it for removal.
+   - In a pane opened *after* the change: `echo $ZDOTDIR` resolves correctly and
+     `echo $XDG_DATA_HOME` matches the current `.zshenv`, while
+     `tmux show-environment` may still report the old value — that divergence is
+     the fix working.
+   - Regression guard: edit an XDG default in `.zshenv`, open a new pane in an
+     existing session, confirm the new value and a derived variable
+     (for example `$ZSH`) both follow.
+   - Already-open panes are expected to keep their old values.
+8. `tmux show-options -g update-environment` lists tmux's nine defaults,
+   including `SSH_AUTH_SOCK`. Confirm `ssh-add -l` succeeds in a pane after
+   detach/reattach.
