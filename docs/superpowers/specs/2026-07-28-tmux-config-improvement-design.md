@@ -126,11 +126,15 @@ information that is rarely load-bearing while coding.
 
 Right side becomes git + battery + clock. `status-left` stays `""`.
 
-| | before | after |
+| | before (measured) | after (projected) |
 |---|---|---|
 | interval | 2 s | 5 s |
 | processes per refresh | ~23 | ~5 |
 | subprocess wall time | 590 ms / 2 s (29%) | ~90 ms / 5 s (1.8%) |
+
+The "before" column is measured. The "after" column is a projection from the
+same per-command timings (git 56 ms + `pmset` 35 ms) and must be re-measured
+against the real status line during verification, not assumed.
 
 The git segment collapses from four processes to one. Verified against this
 repo: `git status --porcelain=v2 --branch` takes 56 ms versus 116 ms for the
@@ -213,10 +217,27 @@ Scope confirmed with the user: only newly created panes need correct values.
 Already-running panes keep what they have, which is inherent — a running
 process's environment cannot be changed externally.
 
-Consequence accepted: a pane tmux starts directly as a non-shell process (for
-example tmux-resurrect restoring straight into `nvim`) receives no XDG vars.
-Harmless here because all four values equal the XDG spec defaults, so a program
-falling back to its own default resolves the same path.
+Consequence accepted: every process tmux starts without a shell — including
+`run-shell` plugin scripts — receives no XDG vars. Harmless here because all
+four values equal the XDG spec defaults, so a program falling back to its own
+default resolves the same path.
+
+The load-bearing instance is tmux-resurrect, which computes its save directory
+with the *same* idiom at `scripts/helpers.sh:4`:
+
+```sh
+default_resurrect_dir="${XDG_DATA_HOME:-$HOME/.local/share}"/tmux/resurrect
+```
+
+Verified both ways — with `XDG_DATA_HOME` set and unset, the path is identically
+`~/.local/share/tmux/resurrect`, where the existing saves already live.
+`~/.tmux/resurrect` does not exist, so the legacy branch at `helpers.sh:1`
+stays inactive, and `@resurrect-dir` is not overridden in the config.
+
+**Implementation must not treat this as incidental.** If `XDG_DATA_HOME` ever
+diverges from `$HOME/.local/share`, resurrect silently begins saving to a new
+directory and existing session history appears to vanish. Guard: set
+`@resurrect-dir` explicitly rather than relying on the default.
 
 `tmux.conf:14` is deleted, restoring tmux's nine `update-environment` defaults —
 the per-client variables the option exists for.
@@ -294,7 +315,12 @@ Keybinding tables and plugin list updated to match.
    (`tmux -f <conf> new-session -d -s verify`); confirm no parse errors.
 2. Diff `show-options -g` and `show-options -s` against a baseline captured
    from the current config; every difference must be intentional per this spec.
-3. Assert `list-keys -N` reports no binding with an empty description.
+3. Assert every binding has a description, checking **each key table
+   explicitly**: `list-keys -T root -N`, `-T prefix -N`, `-T copy-mode-vi -N`.
+   Bare `list-keys -N` is not sufficient — verified that it covers the root and
+   prefix tables but silently omits `copy-mode-vi`. Since `prefix + ?` is bound
+   to plain `list-keys -N`, copy-mode bindings will not appear there; that is
+   tmux behaviour, not a defect to fix.
 4. Re-measure fork rate over 60 s of idle; expect ~1 fork/s against a ~11.5
    fork/s baseline.
 5. Live check: `C-h`/`C-l` crosses an nvim split boundary into a tmux pane and
