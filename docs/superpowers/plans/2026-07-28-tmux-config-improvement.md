@@ -22,7 +22,7 @@ cycle. One new neovim plugin spec supplies the editor half of pane navigation.
 - Do **not** edit `config/zsh/.zshenv`. The environment fix is tmux-side by design (spec: "Stop tmux propagating static config vars").
 - Every new binding gets a `-N "description"`.
 - The harness must never run TPM. `tmux-continuum` would otherwise save/restore against the real `~/.local/share/tmux/resurrect` directory during tests.
-- `config/tmux/tmux.conf` has an **uncommitted local change** in the working tree (`@continuum-save-interval` `15`→`1`). Task 2 reverts it to `15`; do not treat it as a conflict.
+- `@continuum-save-interval` must be `'15'`. It was `'1'` as an uncommitted local experiment; Task 1 normalises it to `'15'` in both the commit and the working tree, so Task 2 only asserts it. Do not reintroduce `'1'`.
 - **Never touch the user's live tmux session.** Do not run `tmux source-file`, `tmux kill-server` without `-L`, or any command against the default socket. Every tmux invocation must pass `-L dotfiles-tmux-verify`. Steps marked *[DEFERRED — final checklist]* are for the human to run at the end; implementers skip them and note them in their report instead.
 - Work happens on branch `tmux-config-improvement` in the main checkout, not a worktree: `~/.config/tmux/*.conf` are absolute symlinks into the main checkout, so a worktree's `statusline.conf` would be silently bypassed (verified).
 - Commit only the files each task names. The working tree carries unrelated changes (`config/claude/*`, `config/kitty/kitty.conf`, `config/zsh/.zshenv`) that must never be staged.
@@ -242,11 +242,15 @@ and this setting:
 set -g @yank_selection 'primary'
 ```
 
-Change the continuum interval back to the upstream default:
+Confirm the continuum interval already reads the upstream default — Task 1
+normalised it, so this should need no edit:
 
 ```tmux
 set -g @continuum-save-interval '15'
 ```
+
+Run `grep -n continuum-save-interval config/tmux/tmux.conf`. If it shows `'1'`,
+change it to `'15'`; if it already shows `'15'`, make no change.
 
 In the General Settings block, after `set -g mouse on`, add the two settings
 tmux-sensible was providing:
@@ -559,14 +563,23 @@ contains "detach-on-destroy off" "detach-on-destroy off" "$(tm show-options -g d
 contains "default-terminal is a server option" "tmux-256color" "$(tm show-options -s default-terminal)"
 contains "undercurl capability" "Smulx"       "$(tm show-options -g terminal-overrides)"
 
-# Every binding in every table must carry a description. Bare `list-keys -N`
-# covers root and prefix but silently omits copy-mode-vi, so check each table.
-for table in root prefix copy-mode-vi; do
-  total=$(tm list-keys -T "$table" 2>/dev/null | wc -l | tr -d ' ')
-  noted=$(tm list-keys -T "$table" -N 2>/dev/null | wc -l | tr -d ' ')
-  if [[ "$total" -eq "$noted" ]]; then ok "all $table bindings described ($noted/$total)"
-  else bad "all $table bindings described" "$total" "$noted"; fi
+# Assert OUR bindings carry a -N description. Do not compare per-table totals:
+# tmux ships 19 undescribed root bindings (mouse) and ~87 undescribed copy-mode-vi
+# bindings, so `total == described` is unsatisfiable and annotating them is out of
+# scope. `list-keys -T <table> -N <key>` prints the note, or "unknown key: <key>"
+# when the key has none — that distinction is the test.
+described() { # described <table> <key>
+  out="$(tm list-keys -T "$1" -N "$2" 2>&1)"
+  case "$out" in
+    *"unknown key"*) bad "described: $1 $2" "a -N note" "$out" ;;
+    *)               ok "described: $1 $2" ;;
+  esac
+}
+for k in r '|' - c N P h j k l H J K L o T b Enter n p C-l g s C-t; do
+  described prefix "$k"
 done
+for k in C-h C-j C-k C-l;  do described root "$k"; done
+for k in v y C-v;           do described copy-mode-vi "$k"; done
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
