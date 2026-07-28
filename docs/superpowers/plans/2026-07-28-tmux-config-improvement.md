@@ -23,6 +23,9 @@ cycle. One new neovim plugin spec supplies the editor half of pane navigation.
 - Every new binding gets a `-N "description"`.
 - The harness must never run TPM. `tmux-continuum` would otherwise save/restore against the real `~/.local/share/tmux/resurrect` directory during tests.
 - `config/tmux/tmux.conf` has an **uncommitted local change** in the working tree (`@continuum-save-interval` `15`→`1`). Task 2 reverts it to `15`; do not treat it as a conflict.
+- **Never touch the user's live tmux session.** Do not run `tmux source-file`, `tmux kill-server` without `-L`, or any command against the default socket. Every tmux invocation must pass `-L dotfiles-tmux-verify`. Steps marked *[DEFERRED — final checklist]* are for the human to run at the end; implementers skip them and note them in their report instead.
+- Work happens on branch `tmux-config-improvement` in the main checkout, not a worktree: `~/.config/tmux/*.conf` are absolute symlinks into the main checkout, so a worktree's `statusline.conf` would be silently bypassed (verified).
+- Commit only the files each task names. The working tree carries unrelated changes (`config/claude/*`, `config/kitty/kitty.conf`, `config/zsh/.zshenv`) that must never be staged.
 
 ---
 
@@ -369,18 +372,12 @@ sh -c "pmset -g batt | awk 'match(\$0,/[0-9]+%/){print substr(\$0,RSTART,RLENGTH
 Expected: a branch name with `*` when dirty (e.g. `mac*`), and a percentage
 (e.g. `95%`).
 
-- [ ] **Step 6: Verify rendering live — this cannot be done headlessly**
+- [ ] **Step 6: [DEFERRED — final checklist] Verify rendering live**
 
-`#()` jobs only run when a client is attached, so a detached test server always
-renders these segments blank. Reload in a real session and look at the bar:
-
-```bash
-tmux source-file ~/.config/tmux/tmux.conf
-```
-
-Expected: the right side shows branch + dirty marker, battery percentage and
-clock, with gruvbox separators and no gaps. Wait up to 5 seconds for the first
-refresh. If a segment is blank, run the Step 5 commands to isolate which one.
+Do **not** run this. `#()` jobs only run when a client is attached, so a detached
+test server always renders these segments blank — this can only be checked in the
+user's own session, and implementers must not reload it. Note in your report that
+the rendered status bar is unverified and why.
 
 - [ ] **Step 7: Re-measure the cost**
 
@@ -511,19 +508,22 @@ Run: `./tests/tmux/verify.sh`
 
 Expected: PASS, `failed: 0`.
 
-- [ ] **Step 6: Install the neovim plugin and verify live**
+- [ ] **Step 6: Install the neovim plugin**
 
 ```bash
 nvim --headless "+Lazy! sync" +qa
 ```
 
-Then, in a real tmux session with a horizontal split and neovim open in one pane:
+Confirm it installed:
 
-- `C-h` / `C-l` move between neovim splits, then cross into the adjacent tmux pane
-  without a prefix.
-- `C-l` in a shell pane moves right rather than clearing.
-- `prefix C-l` clears the shell.
-- `prefix n` / `prefix p` change window, and repeat without re-pressing the prefix.
+```bash
+grep -c vim-tmux-navigator config/neovim/lazy-lock.json
+```
+
+Expected: `1`. Commit the updated `lazy-lock.json` along with the task.
+
+*[DEFERRED — final checklist]* Crossing an nvim split into a tmux pane requires an
+interactive session; do not attempt it. Note it as unverified in your report.
 
 - [ ] **Step 7: Commit**
 
@@ -664,17 +664,12 @@ diff <(tmux -L dotfiles-tmux-verify list-keys -T prefix | sort) \
      <(tmux -L dotfiles-tmux-verify list-keys -T prefix -N | sort)
 ```
 
-- [ ] **Step 7: Verify popups live**
+- [ ] **Step 7: [DEFERRED — final checklist] Verify popups live**
 
-Reload in a real session (`tmux source-file ~/.config/tmux/tmux.conf`), then:
-
-- `prefix g` opens lazygit in a 90% popup, rooted at the current pane's directory.
-- `prefix s` opens an fzf list of sessions; selecting one switches to it.
-- `prefix C-t` opens a scratch shell popup.
-- `prefix ?` lists bindings with descriptions, including root-table `C-h`.
-
-Note: `prefix s` needs at least two sessions to be meaningful, and `switch-client`
-requires an attached client — it cannot be verified headlessly.
+Do **not** run this. Popups and `switch-client` need an attached client, and
+implementers must not reload the user's session. Confirm instead that the three
+bindings exist and reference the right commands — the Step 1 assertions already do
+this — and note in your report that popup behaviour is unverified.
 
 - [ ] **Step 8: Commit**
 
