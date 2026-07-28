@@ -68,6 +68,15 @@ tm split-window -t verify -d "sh -c 'printf %s \"\${ZDOTDIR-}\" > $WORK/zdotdir.
 sleep 2
 lacks "new pane does not inherit stale ZDOTDIR" "/STALE/zdot" "$(cat "$WORK/zdotdir.out" 2>/dev/null)"
 
+echo "== plugins and absorbed settings =="
+TC="$REPO_ROOT/config/tmux/tmux.conf"
+conf_lacks "tmux-copycat removed"   "@plugin 'tmux-plugins/tmux-copycat'"    "$TC"
+conf_lacks "tmux-sensible removed"  "@plugin 'tmux-plugins/tmux-sensible'"   "$TC"
+conf_lacks "yank_selection removed" "@yank_selection '" "$TC"
+contains "status-keys absorbed"       "status-keys emacs"    "$(tm show-options -g status-keys)"
+contains "aggressive-resize absorbed" "aggressive-resize on" "$(tm show-options -gw aggressive-resize)"
+contains "continuum save interval 15" "save-interval 15"     "$(tm show-options -g @continuum-save-interval)"
+
 echo
 echo "passed: $PASS   failed: $FAIL"
 [[ $FAIL -eq 0 ]]
