@@ -14,6 +14,9 @@ config/claude/security_warnings_state_*.json
 config/claude/plugins/.last_inuse_sweep
 config/claude/plugins/plugin-catalog-cache.json
 config/claude/skills/*-workspace/
+config/claude/chrome/
+config/claude/feedback/
+config/claude/gh-pr-status-cache.json
 
 # External reference docs (not tracked)
 claude/config/plugins/local/backstage-dev/docs/
