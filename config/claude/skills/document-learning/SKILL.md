@@ -1,23 +1,24 @@
 ---
 name: document-learning
-description: Persist a completed /learn session into ~/Developer/repo/dnjmn/learn/<topic>/notes.md. Use this whenever the user asks to "document this learning session", "save these notes", "persist this learn session", types /document-learning, or when a /learn Socratic session reaches Phase 3 (Graduation) and needs to be captured for future reference. Also use when the user mentions writing up or archiving what they just learned in a Claude session.
+description: Persist a completed /learn session into ~/Developer/repo/dnjmn/learn/<topic>/notes.md. Use this whenever the user asks to "document this learning session", "save these notes", "persist this learn session", types /document-learning, or when a /learn session reaches its epilogue and needs to be captured for future reference. Also use when the user mentions writing up or archiving what they just learned in a Claude session.
 ---
 
 # Document Learning Session
 
-Persist the current `/learn` Socratic-tutor session into the user's learning workspace at `~/Developer/repo/dnjmn/learn/<topic>/notes.md` so future sessions can pick up where they left off without re-covering material.
+Persist the current `/learn` session into the user's learning workspace at `~/Developer/repo/dnjmn/learn/<topic>/notes.md` so future sessions can pick up where they left off without re-covering material.
 
 ## When this skill runs
 
 You arrive after a `/learn` session has finished (or nearly finished). The conversation history contains:
 
-- A topic (e.g. "react-query", "python-asyncio", "rust-ownership")
-- A roadmap of concepts the tutor built
-- Explain-back exchanges where the user put concepts in their own words
-- Source URLs the tutor fetched during research (Context7, official docs, blog posts)
-- Usually a Phase 3 "Session Handoff" block
+- A topic (e.g. "envoy", "python-asyncio", "rust-ownership"), optionally with a task the user wants to build
+- A table of contents: chapters phrased as questions, each covering one design decision
+- Chapters told as a story: situation → obvious fix → *your turn* → why it broke → what they built → the price → cliffhanger
+- *Your turn* exchanges where the user predicted a design before the reveal
+- Source URLs in each chapter's footnotes (Context7, official docs, origin posts)
+- Usually an epilogue with a "story → official name → docs" table
 
-Your job is to extract that material faithfully and write it to disk. **You are an archivist, not an author.** Do not invent content, re-teach, or paraphrase the user's explain-backs. If something is missing from the conversation, note it as missing rather than filling it in from training data.
+Your job is to extract that material faithfully and write it to disk. **You are an archivist, not an author.** Do not invent content, re-teach, or paraphrase the user's *your turn* predictions. If something is missing from the conversation, note it as missing rather than filling it in from training data.
 
 ## The workspace
 
@@ -58,13 +59,14 @@ Never overwrite prior sessions. The learning workspace is cumulative by design.
 
 Pull these from the conversation, in priority order:
 
-1. **The `/learn` Phase 3 Session Handoff block** if it exists — copy it verbatim into a "Session Handoff" subsection. This is the canonical artifact the learn command produces and the user explicitly wants it preserved.
-2. **User's explain-back quotes** — the actual words the user used when validating each concept. These are the highest-signal content in the entire session because they reflect how the user actually thinks about the topic. Preserve them verbatim in quotes, not paraphrased.
-3. **Source URLs** — every link the tutor fetched (Context7, WebSearch, WebFetch). Group them by concept. Drop any that weren't actually fetched this session.
-4. **Gotchas** — the pitfalls surfaced during research, verbatim.
-5. **Go/K8s analogy bridges** — if the tutor mapped concepts to the user's existing stack, capture those mappings.
+1. **The chapter arc** — for each chapter: its title-question, the problem, why the obvious fix broke, and what was built. Compress each chapter to 3–5 sentences that keep the *causal chain*; the chain is what makes the concept memorable, so don't reduce it to a definition.
+2. **User's *your turn* predictions** — the actual words the user used when predicting a design, and the one-line comparison with what really happened. Preserve the user's words verbatim in quotes.
+3. **The epilogue table** (story → official name → docs) verbatim, if it exists.
+4. **Source URLs** — every link from chapter footnotes. Group them by chapter. Drop any that weren't actually fetched this session.
+5. **The price / gotchas** — one per chapter, verbatim.
+6. **Task pointers** — if the user named a task and the epilogue mapped chapters to it, capture that.
 
-If the session never reached Phase 3 (user stopped early), capture whatever concepts did get validated and mark the rest as "not covered in this session".
+If the session never reached the epilogue (user stopped early), capture the chapters that were read and list the remaining table-of-contents entries as "not read this session".
 
 ### 4. Write notes.md using this template
 
@@ -74,7 +76,7 @@ topic: <topic-slug>
 last_updated: <YYYY-MM-DD>
 sessions:
   - date: <YYYY-MM-DD>
-    concepts_validated: [<concept-1>, <concept-2>, ...]
+    chapters_read: [<chapter-1-short-title>, <chapter-2-short-title>, ...]
     status: <complete | partial>
 ---
 
@@ -84,22 +86,27 @@ sessions:
 
 ## Session — <YYYY-MM-DD>
 
-### Concepts validated
-- **<concept-1>** — <one-line summary from the tutor's teaching>
-- **<concept-2>** — <one-line summary>
-- ...
+### The story, chapter by chapter
+**1. <chapter title-question>**
+<3–5 sentences: the problem → why the obvious fix broke → what they built (now named) → what it costs.>
 
-### In my own words
-<The user's explain-back quotes, one per concept, verbatim. Format as:>
+**2. <chapter title-question>**
+<...>
 
-**<concept-1>:**
+### What I predicted
+<The user's *your turn* answers, verbatim, with the one-line comparison. Format as:>
+
+**Ch 1 — <title>:**
 > <exact words the user said>
 
-**<concept-2>:**
-> <exact words the user said>
+<one line: how it compared with what was actually built>
 
-### Mental model
-<From the Phase 3 handoff if present, else synthesized from user's explain-backs. 2-3 sentences max.>
+### Story → vocabulary
+| In the story | Official name | Docs |
+|---|---|---|
+| <plot point> | <term> | [link](<url>) |
+
+(Verbatim from the epilogue if present; omit if the session ended early.)
 
 ### Go / K8s bridges
 | You already know | <Topic> equivalent |
@@ -109,17 +116,17 @@ sessions:
 
 (Omit this section if the tutor didn't draw analogies.)
 
-### Gotchas
-- <gotcha from research, verbatim>
+### The price
+- **Ch N:** <gotcha/cost from research, verbatim>
 - ...
 
-### Sources verified this session
-- **<concept-1>:** [<title>](<url>)
-- **<concept-2>:** [<title>](<url>)
+### Sources by chapter
+- **Ch 1:** [<title>](<url>) · [<title>](<url>)
+- **Ch 2:** [<title>](<url>)
 - ...
 
-### Session Handoff (verbatim from /learn Phase 3)
-<Paste the entire Phase 3 handoff block the /learn command produced, unedited. Wrap in a fenced code block if it makes formatting cleaner.>
+### If I'm building <task>
+<From the epilogue: which chapters matter, in what order, and the starting snippet. Omit if no task was given.>
 ```
 
 For a **revisit** session, append a new `## Session — <date>` block below the existing ones rather than editing prior sections.
@@ -130,14 +137,15 @@ After writing, report:
 
 - The full path written to
 - Whether it was a new file or appended session
-- A one-line summary of what was captured (e.g. "5 concepts, 7 source URLs, user explain-backs preserved")
+- A one-line summary of what was captured (e.g. "6 chapters, 9 source URLs, 4 predictions preserved")
 
 Do not paste the full notes back into the chat — the file is the artifact, and re-dumping it wastes the user's context.
 
 ## What NOT to do
 
 - **Don't invent sources.** If a URL wasn't in the conversation, don't add it. A made-up link is worse than a missing one.
-- **Don't paraphrase explain-backs.** The user's exact words are the point. If you smooth them out you lose the signal of how they actually think.
+- **Don't paraphrase the user's predictions.** Their exact words are the point. If you smooth them out you lose the signal of how they actually think.
+- **Don't flatten chapters into definitions.** Keep the problem → broke → built chain; a glossary is what the user was trying to avoid.
 - **Don't re-teach.** This skill archives; it does not instruct. If a concept seems under-explained in the transcript, leave it as-is — the gap itself is data.
 - **Don't overwrite.** Always append new sessions to existing `notes.md` files.
 - **Don't write to the current repo.** The destination is always `~/Developer/repo/dnjmn/learn/`, regardless of where the session was invoked from.
@@ -145,4 +153,4 @@ Do not paste the full notes back into the chat — the file is the artifact, and
 
 ## Why this matters
 
-The user runs `/learn` sessions to build durable understanding of new technologies. Without persistence, every session's hard-won explain-backs and verified sources evaporate when the conversation ends. By archiving faithfully — especially the user's *own words* from explain-backs — future sessions can calibrate the user as "already fluent in X" instead of re-probing from scratch. That's the whole point of the `learn/` workspace.
+The user runs `/learn` sessions to build durable understanding of new technologies. Without persistence, every session's story, predictions, and verified sources evaporate when the conversation ends. By archiving faithfully — the causal chain of each chapter and the user's *own words* from predictions — future sessions can treat the user as "already read the book on X" instead of starting from the prologue. That's the whole point of the `learn/` workspace.
