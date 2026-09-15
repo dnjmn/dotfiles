@@ -23,10 +23,6 @@ Tmux (Terminal Multiplexer) is a powerful tool that allows you to run multiple t
 
 ### 3. Pre-configured Plugins
 
-**Session Management:**
-- **tmux-resurrect** - Save and restore tmux sessions after reboot
-- **tmux-continuum** - Automatic session save/restore every 15 minutes
-
 **Productivity:**
 - **tmux-yank** - Better copy/paste integration with system clipboard
 
@@ -47,8 +43,6 @@ This setup follows XDG Base Directory specification:
 │       └── tmux/                            # XDG_DATA_HOME
 │           └── plugins/                     # Plugin installation directory
 │               ├── tpm/                     # Tmux Plugin Manager
-│               ├── tmux-resurrect/
-│               ├── tmux-continuum/
 │               └── tmux-yank/
 └── Developer/repos/dnjmn/dotfiles/tmux/ # Source (version controlled)
     ├── tmux.conf                            # Configuration file
@@ -96,14 +90,10 @@ Tmux removes `ZDOTDIR` and the four `XDG_*` variables (`XDG_CONFIG_HOME`, `XDG_D
 - Scroll with mouse wheel
 - Click to select windows
 
-### 7. Session Persistence
-- Sessions automatically saved every 15 minutes
-- Restore sessions after reboot with `Prefix + Ctrl+r`
-- Manual save with `Prefix + Ctrl+s`
-
-### 8. Visual Styling
+### 7. Visual Styling
 - **Theme:** Gruvbox Dark (matches Kitty terminal)
-- **Status bar:** Git branch + dirty marker, battery percentage, clock (5s refresh)
+- **Status bar:** Git branch + dirty marker, clock (5s refresh). Battery was dropped
+  — the macOS menu bar already shows it.
 - **Pane borders:** Active pane highlighted in green
 - **256 color support:** Full color support for modern terminals
 
@@ -226,15 +216,6 @@ Prefix + n/p  # Next/previous
 Prefix + 0-9  # Direct jump
 ```
 
-### Workflow 3: Session Persistence
-```bash
-# Your work is automatically saved every 15 minutes
-
-# After reboot, restore session
-tmux
-Prefix + Ctrl+r    # Restore last session
-```
-
 ## Customization
 
 ### Change Status Bar Colors
@@ -309,6 +290,10 @@ With tmux-yank plugin:
 
 ## Recent Configuration Changes
 
+### 2026-07-31 - Session Persistence Removed
+- Removed tmux-resurrect and tmux-continuum; sessions no longer save or restore
+- `Prefix + Ctrl+s` / `Prefix + Ctrl+r` no longer save or restore sessions
+
 ### 2026-07-28 - Vim-Aware Navigation and Status Bar Update
 - Added prefix-free `C-h/j/k/l` pane navigation (vim-aware: passes through to nvim/fzf/lazygit)
 - Window navigation now uses `Prefix + n/p` (repeatable); removed `Prefix + C-h/l`
@@ -337,4 +322,4 @@ With tmux-yank plugin:
 
 ---
 
-**Last updated:** 2026-07-28
+**Last updated:** 2026-07-31

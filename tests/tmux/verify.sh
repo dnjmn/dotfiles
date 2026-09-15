@@ -7,8 +7,8 @@
 #   * platform.sh:296-299 exports XDG_* using the same ${VAR:-default} idiom under
 #     test here, which would contaminate the environment assertions below.
 #
-# The TPM loader is stripped before booting: tmux-continuum would otherwise
-# save/restore against the real ~/.local/share/tmux/resurrect directory.
+# The TPM loader is stripped before booting so the verify server never clones or
+# runs plugins against the user's real ~/.local/share/tmux/plugins directory.
 
 set -uo pipefail
 
@@ -61,7 +61,6 @@ for v in ZDOTDIR XDG_CONFIG_HOME XDG_DATA_HOME XDG_CACHE_HOME XDG_STATE_HOME; do
   env_has_line "$v marked for removal" "-$v"
 done
 contains "update-environment restores SSH_AUTH_SOCK" "SSH_AUTH_SOCK" "$(tm show-options -g update-environment)"
-contains "@resurrect-dir pinned explicitly" "tmux/resurrect" "$(tm show-options -g @resurrect-dir 2>/dev/null)"
 
 # Behavioural: a new pane must not receive the stale value.
 tm split-window -t verify -d "sh -c 'printf %s \"\${ZDOTDIR-}\" > $WORK/zdotdir.out'"
@@ -73,9 +72,12 @@ TC="$REPO_ROOT/config/tmux/tmux.conf"
 conf_lacks "tmux-copycat removed"   "@plugin 'tmux-plugins/tmux-copycat'"    "$TC"
 conf_lacks "tmux-sensible removed"  "@plugin 'tmux-plugins/tmux-sensible'"   "$TC"
 conf_lacks "yank_selection removed" "@yank_selection '" "$TC"
+# Session persistence was dropped deliberately. continuum only drives resurrect,
+# so both must stay gone: continuum alone would fire a timer at missing scripts.
+conf_lacks "tmux-resurrect removed"  "tmux-resurrect"  "$TC"
+conf_lacks "tmux-continuum removed"  "continuum"       "$TC"
 contains "status-keys absorbed"       "status-keys emacs"    "$(tm show-options -g status-keys)"
 contains "aggressive-resize absorbed" "aggressive-resize on" "$(tm show-options -gw aggressive-resize)"
-contains "continuum save interval 15" "save-interval 15"     "$(tm show-options -g @continuum-save-interval)"
 
 echo "== status bar =="
 SR="$(tm show-options -g status-right)"
@@ -85,6 +87,7 @@ lacks "no docker segment"   "docker"          "$SR"
 lacks "no k8s segment"      "kubectl"         "$SR"
 lacks "no cpu segment"      "top -l"          "$SR"
 lacks "no memory segment"   "memory_pressure" "$SR"
+lacks "no battery segment"  "pmset"           "$SR"
 contains "single git call"  "porcelain=v2"    "$SR"
 lacks "no cd subshell"      "cd #{pane_current_path}" "$SR"
 
