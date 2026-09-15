@@ -86,4 +86,4 @@ if [[ -f "$SECRETS" ]]; then
   source "$SECRETS"
 fi
 
-export ANTHROPIC_MODEL="best"
+export CLAUDE_CODE_SUBAGENT_MODEL=sonnet

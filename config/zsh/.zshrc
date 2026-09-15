@@ -31,3 +31,5 @@ for f in "$ZSH_CONFIG_DIR"/functions/*.zsh(N); do _source_config "$f"; done
 export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH
 export PATH=$HOME/.docker/cli-plugins:$PATH
 
+
+. "$HOME/.local/share/../bin/env"
