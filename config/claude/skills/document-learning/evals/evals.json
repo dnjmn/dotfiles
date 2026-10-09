@@ -1,0 +1,26 @@
+{
+  "skill_name": "document-learning",
+  "evals": [
+    {
+      "id": 1,
+      "name": "react-query-complete-fresh",
+      "prompt": "Read the simulated prior conversation at evals/transcripts/react-query-complete.md — it is the full transcript of a /learn session I just finished. Document this learning session using the document-learning skill. Write the notes to the learn workspace. After writing, tell me the path and a one-line summary of what you captured.",
+      "expected_output": "Creates ~/Developer/repo/dnjmn/learn/react-query/notes.md with Phase 3 handoff verbatim, all 5 explain-back quotes preserved verbatim, all 5 source URLs, YAML frontmatter with topic/date/concepts_validated, Go/HTTP analogy bridges. Does not paste notes content back into chat.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "python-asyncio-partial-no-phase3",
+      "prompt": "Read the simulated prior conversation at evals/transcripts/python-asyncio-partial.md — it is a /learn session I had to cut short before reaching Phase 3 graduation. Document what we did cover so I can resume tomorrow. Use the document-learning skill.",
+      "expected_output": "Creates ~/Developer/repo/dnjmn/learn/python-asyncio/notes.md. Status in frontmatter is 'partial'. Captures only the 2 validated concepts (event loop, coroutines+await) with their explain-backs verbatim and their source URLs. Marks the remaining 3 concepts as 'not covered in this session'. No fabricated Phase 3 handoff block — that section is either absent or explicitly marked as not generated.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "python-asyncio-revisit-append",
+      "prompt": "Read the simulated prior conversation at evals/transcripts/python-asyncio-revisit.md. This is a resumed /learn session for python-asyncio — I finished the remaining 3 concepts today after covering 2 yesterday. The notes.md file already exists from yesterday's session. Document today's session using the document-learning skill, appending to the existing notes without overwriting yesterday's content.\n\nBefore running the skill, set up the pre-existing notes.md file to simulate yesterday's state: create ~/Developer/repo/dnjmn/learn/python-asyncio/notes.md with a minimal frontmatter and a 'Session — 2026-04-08' section covering event loop and coroutines+await. Then run the skill to append today's session.",
+      "expected_output": "The resulting notes.md contains BOTH yesterday's session AND today's session as separate dated blocks. Yesterday's content is untouched. Today's section includes the Phase 3 handoff verbatim, 3 new explain-back quotes, source URLs for the 3 new concepts. Frontmatter is updated (last_updated bumped, new session entry appended to sessions list).",
+      "files": []
+    }
+  ]
+}

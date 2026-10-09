@@ -23,14 +23,11 @@ Tmux (Terminal Multiplexer) is a powerful tool that allows you to run multiple t
 
 ### 3. Pre-configured Plugins
 
-**Session Management:**
-- **tmux-resurrect** - Save and restore tmux sessions after reboot
-- **tmux-continuum** - Automatic session save/restore every 15 minutes
-
 **Productivity:**
-- **tmux-sensible** - Sensible default settings for tmux
 - **tmux-yank** - Better copy/paste integration with system clipboard
-- **tmux-copycat** - Enhanced search in tmux (regex, file paths, URLs)
+
+**Navigation:**
+- **vim-tmux-navigator** - Installed on the neovim side (`config/neovim/lua/plugins/tmux.lua`), not via TPM. Enables seamless `C-h/j/k/l` navigation between tmux panes and neovim splits.
 
 ## XDG Directory Structure
 
@@ -46,15 +43,19 @@ This setup follows XDG Base Directory specification:
 │       └── tmux/                            # XDG_DATA_HOME
 │           └── plugins/                     # Plugin installation directory
 │               ├── tpm/                     # Tmux Plugin Manager
-│               ├── tmux-sensible/
-│               ├── tmux-resurrect/
-│               ├── tmux-continuum/
-│               ├── tmux-yank/
-│               └── tmux-copycat/
+│               └── tmux-yank/
 └── Developer/repos/dnjmn/dotfiles/tmux/ # Source (version controlled)
     ├── tmux.conf                            # Configuration file
     └── install.sh                           # Installation script
 ```
+
+### Environment Handling
+
+Tmux removes `ZDOTDIR` and the four `XDG_*` variables (`XDG_CONFIG_HOME`, `XDG_DATA_HOME`, `XDG_CACHE_HOME`, `XDG_STATE_HOME`) from each new process. This makes every new pane re-derive these values from `~/.zshenv`.
+
+**User-visible behavior:**
+- Newly created panes pick up `.zshenv` edits immediately
+- Already-open panes keep their original values (expected, not a bug)
 
 ## Key Features
 
@@ -68,14 +69,14 @@ This setup follows XDG Base Directory specification:
 - New splits open in current directory
 
 ### 3. Vim-Style Navigation
-- **Move between panes:** `Prefix + h/j/k/l`
+- **Move between panes (prefix-free):** `Ctrl + h/j/k/l` - Vim-aware: keys pass through when the pane runs nvim, fzf, or lazygit
+- **Move between panes (fallback):** `Prefix + h/j/k/l` - Use when the prefix-free bindings conflict with full-screen TUIs
 - **Resize panes:** `Prefix + H/J/K/L` (shift + hjkl)
 - **Cycle panes:** `Prefix + o`
 
 ### 4. Window Management
 - **New window:** `Prefix + c` (opens in current directory)
-- **Switch windows:** `Prefix + n/p` (next/previous) or `Prefix + 0-9`
-- **Quick window jump:** `Prefix + Ctrl+h/l`
+- **Switch windows:** `Prefix + n/p` (next/previous, repeatable) or `Prefix + 0-9`
 
 ### 5. Copy Mode (Vim-style)
 - **Enter copy mode:** `Prefix + Enter`
@@ -89,14 +90,10 @@ This setup follows XDG Base Directory specification:
 - Scroll with mouse wheel
 - Click to select windows
 
-### 7. Session Persistence
-- Sessions automatically saved every 15 minutes
-- Restore sessions after reboot with `Prefix + Ctrl+r`
-- Manual save with `Prefix + Ctrl+s`
-
-### 8. Visual Styling
+### 7. Visual Styling
 - **Theme:** Gruvbox Dark (matches Kitty terminal)
-- **Status bar:** Shows session name, window info, time, date, hostname
+- **Status bar:** Git branch + dirty marker, clock (5s refresh). Battery was dropped
+  — the macOS menu bar already shows it.
 - **Pane borders:** Active pane highlighted in green
 - **256 color support:** Full color support for modern terminals
 
@@ -110,6 +107,8 @@ This setup follows XDG Base Directory specification:
 | `tmux ls` | List sessions |
 | `tmux attach -t name` | Attach to session |
 | `Prefix + d` | Detach from session |
+| `Prefix + s` | Switch session (fzf popup) |
+| `Prefix + w` | Choose window/session (tree view) |
 | `Prefix + $` | Rename session |
 
 ### Window Management
@@ -118,10 +117,10 @@ This setup follows XDG Base Directory specification:
 | `Prefix + c` | Create new window |
 | `Prefix + ,` | Rename window |
 | `Prefix + &` | Close window |
-| `Prefix + n` | Next window |
-| `Prefix + p` | Previous window |
+| `Prefix + n` | Next window (repeatable) |
+| `Prefix + p` | Previous window (repeatable) |
 | `Prefix + 0-9` | Jump to window number |
-| `Prefix + w` | List windows |
+| `Prefix + w` | Choose window/session (tree view) |
 
 ### Pane Management
 | Shortcut | Action |
@@ -129,12 +128,13 @@ This setup follows XDG Base Directory specification:
 | `Prefix + \|` | Split horizontal |
 | `Prefix + -` | Split vertical |
 | `Prefix + x` | Close pane |
-| `Prefix + h/j/k/l` | Navigate panes (vim-style) |
+| `Ctrl + h/j/k/l` | Navigate panes (vim-aware, prefix-free) |
+| `Prefix + h/j/k/l` | Navigate panes (fallback for TUIs) |
 | `Prefix + H/J/K/L` | Resize panes (vim-style) |
-| `Prefix + o` | Cycle through panes |
+| `Prefix + o` | Cycle through panes (repeatable) |
 | `Prefix + q` | Show pane numbers |
 | `Prefix + z` | Toggle pane zoom |
-| `Prefix + !` | Break pane into window |
+| `Prefix + b` | Break pane into window |
 | `Prefix + {/}` | Swap panes |
 
 ### Copy Mode
@@ -150,10 +150,18 @@ This setup follows XDG Base Directory specification:
 | Shortcut | Action |
 |----------|--------|
 | `Prefix + r` | Reload config |
+| `Prefix + C-l` | Clear screen (shell clear) |
 | `Prefix + I` | Install plugins |
 | `Prefix + U` | Update plugins |
 | `Prefix + ?` | List all keybindings |
 | `Prefix + t` | Show clock |
+
+### Popups
+| Shortcut | Action |
+|----------|--------|
+| `Prefix + g` | Lazygit (90% popup) |
+| `Prefix + s` | Switch session (fzf popup) |
+| `Prefix + C-t` | Scratch shell (popup in current dir) |
 
 ## Configuration File Locations
 
@@ -208,19 +216,10 @@ Prefix + n/p  # Next/previous
 Prefix + 0-9  # Direct jump
 ```
 
-### Workflow 3: Session Persistence
-```bash
-# Your work is automatically saved every 15 minutes
-
-# After reboot, restore session
-tmux
-Prefix + Ctrl+r    # Restore last session
-```
-
 ## Customization
 
 ### Change Status Bar Colors
-Edit `~/.config/tmux/tmux.conf` lines 76-90 (Status Bar Configuration section)
+Edit `~/.config/tmux/statusline.conf` (Status Bar Configuration)
 
 ### Add More Plugins
 1. Add plugin line to config: `set -g @plugin 'user/plugin-name'`
@@ -289,13 +288,21 @@ With tmux-yank plugin:
 - Copy selection: `y` in copy mode → copies to clipboard
 - Mouse selection → automatically copies to clipboard
 
-### Search in Panes (tmux-copycat)
-- Search files: `Prefix + Ctrl+f`
-- Search URLs: `Prefix + Ctrl+u`
-- Search git status: `Prefix + Ctrl+g`
-- Search IP addresses: `Prefix + Alt+i`
-
 ## Recent Configuration Changes
+
+### 2026-07-31 - Session Persistence Removed
+- Removed tmux-resurrect and tmux-continuum; sessions no longer save or restore
+- `Prefix + Ctrl+s` / `Prefix + Ctrl+r` no longer save or restore sessions
+
+### 2026-07-28 - Vim-Aware Navigation and Status Bar Update
+- Added prefix-free `C-h/j/k/l` pane navigation (vim-aware: passes through to nvim/fzf/lazygit)
+- Window navigation now uses `Prefix + n/p` (repeatable); removed `Prefix + C-h/l`
+- Added `Prefix + C-l` for clear screen (since root `C-l` now steers panes)
+- Added popups: `Prefix + g` (lazygit), `Prefix + s` (fzf session switcher), `Prefix + C-t` (scratch shell)
+- Simplified status bar: git branch + dirty marker, battery, clock (removed docker/k8s/CPU/memory)
+- Removed tmux-sensible and tmux-copycat plugins (functionality absorbed or unused)
+- Added vim-tmux-navigator on neovim side for seamless navigation
+- Fixed environment handling: new panes re-derive XDG variables from `~/.zshenv`
 
 ### 2025-11-13 - Initial Setup
 - Created XDG-compliant configuration
@@ -315,4 +322,4 @@ With tmux-yank plugin:
 
 ---
 
-**Last updated:** 2025-11-13
+**Last updated:** 2026-07-31

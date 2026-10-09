@@ -85,3 +85,5 @@ export SECRETS=$XDG_CONFIG_HOME/zsh/env.zsh
 if [[ -f "$SECRETS" ]]; then
   source "$SECRETS"
 fi
+
+export CLAUDE_CODE_SUBAGENT_MODEL=sonnet
