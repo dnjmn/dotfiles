@@ -18,7 +18,7 @@
     ],
     "defaultMode": "auto"
   },
-  "model": "opus[1m]",
+  "model": "opus",
   "worktree": {
     "baseRef": "head"
   },
@@ -30,11 +30,12 @@
   "enabledPlugins": {
     "feature-dev@claude-plugins-official": true,
     "superpowers@claude-plugins-official": true,
-    "context7@claude-plugins-official": true,
     "gopls-lsp@claude-plugins-official": true,
     "slack@claude-plugins-official": true,
     "receipts@claude-plugins-official": true,
-    "frontend-design@claude-plugins-official": true
+    "frontend-design@claude-plugins-official": true,
+    "finance@synced": false,
+    "legal@synced": false
   },
   "extraKnownMarketplaces": {
     "everything-claude-code": {
@@ -63,6 +64,9 @@
     },
     "claude-opus-5": {
       "effortLevel": "high"
+    },
+    "claude-opus-5-5": {
+      "effortLevel": "xhigh"
     }
   },
   "askUserQuestionTimeout": "never",
