@@ -17,6 +17,13 @@ config/claude/skills/*-workspace/
 config/claude/chrome/
 config/claude/feedback/
 config/claude/gh-pr-status-cache.json
+config/claude/state/
+config/claude/plugins/.trash/
+config/claude/plugins/store/
+config/claude/plugins/plugin-directory-cache*.json
+# Plugins and skills synced from claude.ai, re-downloaded per machine
+config/claude/plugins/synced/
+config/claude/skills/synced/
 
 # External reference docs (not tracked)
 claude/config/plugins/local/backstage-dev/docs/
