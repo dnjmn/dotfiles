@@ -1,2 +1,0 @@
-# Claude Code configuration
-export CLAUDE_CODE_SUBAGENT_MODEL="claude-opus-4-5-20251101"
